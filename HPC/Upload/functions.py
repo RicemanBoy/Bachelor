@@ -1,13 +1,10 @@
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
-from qiskit.visualization import plot_histogram
 import numpy as np
 from qiskit_aer import AerSimulator
 from qiskit.transpiler.passes.synthesis import SolovayKitaev
 from qiskit.synthesis import generate_basic_approximations
-from qiskit.quantum_info import Operator
 
-from qiskit_aer.noise import (NoiseModel, QuantumError, ReadoutError,
-    pauli_error, depolarizing_error, thermal_relaxation_error)
+from qiskit_aer.noise import (NoiseModel, pauli_error)
 
 from qiskit.circuit.library import UnitaryGate
 
