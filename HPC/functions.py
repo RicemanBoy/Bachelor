@@ -1,9 +1,6 @@
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
 from qiskit.visualization import plot_histogram
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import ticker
-import bitstring
 from qiskit_aer import AerSimulator
 from qiskit.transpiler.passes.synthesis import SolovayKitaev
 from qiskit.synthesis import generate_basic_approximations
