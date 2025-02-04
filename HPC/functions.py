@@ -27,34 +27,6 @@ x_ideal = UnitaryGate(matrix_x)
 matrix_z = ([[1,0],[0,-1]])
 z_ideal = UnitaryGate(matrix_z)
 ################################################################################################################################################################
-#https://stem.mitre.org/quantum/error-correction-codes/steane-ecc.htm, https://quantumcomputing.stackexchange.com/questions/28807/how-to-implement-the-circuit-of-steane-code-for-quantum-error-correction
-def code(n=2):         #encodes |00>_L
-    qr = QuantumRegister(7*n+1,"q")
-    cbits = ClassicalRegister(7,"c")
-    qc = QuantumCircuit(qr, cbits)
-
-    for i in range(n):
-        qc.h(4+7*i)
-        qc.h(5+7*i)
-        qc.h(6+7*i)
-
-        qc.cx(0+7*i,1+7*i)
-        qc.cx(0+7*i,2+7*i)
-
-        qc.cx(6+7*i,0+7*i)
-        qc.cx(6+7*i,1+7*i)
-        qc.cx(6+7*i,3+7*i)
-
-        qc.cx(5+7*i,0+7*i)
-        qc.cx(5+7*i,2+7*i)
-        qc.cx(5+7*i,3+7*i)
-
-        qc.cx(4+7*i,1+7*i)
-        qc.cx(4+7*i,2+7*i)
-        qc.cx(4+7*i,3+7*i)
-
-    return qc
-#https://www.nature.com/articles/srep19578 , https://arxiv.org/pdf/1106.2190 Figure 5b)
 def code_goto(n=2):             #encodes |00>_L
     qr = QuantumRegister(7*n+1,"q")
     cbits = ClassicalRegister(9+6,"c")
@@ -106,41 +78,6 @@ def code_goto(n=2):             #encodes |00>_L
         qc.cx(0+7*i,anc)
         qc.cx(5+7*i,anc)
         qc.cx(6+7*i,anc)
-
-        qc.measure(anc,i)
-        qc.reset(anc)        
-    return qc
-
-def code_goto_test(n=2):             #encodes |00>_L
-    qr = QuantumRegister(7*n+1,"q")
-    cbits = ClassicalRegister(9+6,"c")
-    qc = QuantumCircuit(qr, cbits)
-    
-    anc = qc.num_qubits - 1
-
-    for i in range(n):
-        qc.append(h_ideal, [1+7*i])
-
-        qc.append(h_ideal, [2+7*i])
-        qc.append(h_ideal, [3+7*i])
-
-        qc.append(cx_ideal, [0+7*i, 1+7*i])
-        qc.append(cx_ideal, [5+7*i, 3+7*i])
-
-        qc.append(cx_ideal, [6+7*i, 2+7*i])
-
-        qc.append(cx_ideal, [4+7*i, 1+7*i])
-
-        qc.append(cx_ideal, [0+7*i, 2+7*i])
-        qc.append(cx_ideal, [6+7*i, 3+7*i])
-
-        qc.append(cx_ideal, [5+7*i, 1+7*i])
-
-        qc.append(cx_ideal, [4+7*i, 6+7*i])
-
-        qc.append(cx_ideal, [anc, 0+7*i])
-        qc.append(cx_ideal, [anc, 5+7*i])
-        qc.append(cx_ideal, [anc, 6+7*i])
 
         qc.measure(anc,i)
         qc.reset(anc)        
