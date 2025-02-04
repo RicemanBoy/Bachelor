@@ -1,8 +1,0 @@
-#!/bin/bash -l 
-#SBATCH --ntasks=4 
-#SBATCH --time=07:00:00 
-#SBATCH --job-name=IQPE_QEC4 
-#SBATCH --export=NONE 
-unset SLURM_EXPORT_ENV 
-module load python/3.10-anaconda 
-python3 4.py
