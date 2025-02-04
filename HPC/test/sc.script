@@ -1,0 +1,11 @@
+#! /bin/bash
+ sbatch.tinyfat job0.script
+ sbatch.tinyfat job1.script
+ sbatch.tinyfat job2.script
+ sbatch.tinyfat job3.script
+ sbatch.tinyfat job4.script
+ sbatch.tinyfat job5.script
+ sbatch.tinyfat job6.script
+ sbatch.tinyfat job7.script
+ sbatch.tinyfat job8.script
+ sbatch.tinyfat job9.script
