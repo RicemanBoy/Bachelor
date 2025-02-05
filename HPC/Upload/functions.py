@@ -608,17 +608,32 @@ def gen_data(name):
         pre.append(preselec), post.append(postselec), one.append(ones), zero.append(zeros)
         ###################################################################################################
         qc = code_goto()
+
+
         X_L(qc, 1)
+
         H_L(qc, 0)
+
         ###############
-        root_T_L(qc, 0, err=True)
-        root_T_L(qc, 1, err=True)
+        root_T_L(qc, 0, err=False)
+        qec_ideal(qc, 0)
+
+        root_T_L(qc, 1, err=False)
+        qec_ideal(qc, 1)
+
         CNOT_L(qc, 0)
-        adj_root_T_L(qc, 1, err=True)
+
+        adj_root_T_L(qc, 1, err=False)
+        qec_ideal(qc, 1)
+
         CNOT_L(qc, 0)
+
         ################
         adj_T_L(qc, 0)
+
         H_L(qc, 0)
+
+        qec_ideal(qc,0)
 
         zeros, ones, preselec , postselec = readout(qc, 0, shots, i)
 
@@ -632,4 +647,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("Steane_3rd_ideal{}.txt".format(name), data, delimiter=",")
+    np.savetxt("Steane_3rd_ideal_leon{}.txt".format(name), data, delimiter=",")
