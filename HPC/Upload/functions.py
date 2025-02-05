@@ -158,16 +158,26 @@ approx = generate_basic_approximations(basis, depth=3)
 skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
 rootT = skd(circ)
 
-def root_T_L(qc: QuantumCircuit, pos: int):
+def root_T_L(qc: QuantumCircuit, pos: int, err: False):
     instruction = rootT.data
-
-    for i in instruction:
-        if i.name == "t":
-            T_L(qc, pos=pos)
-        if i.name == "tdg":
-            adj_T_L(qc, pos=pos)
-        if i.name == "h":
-            H_L(qc, pos=pos)
+    if err:
+        for i in instruction:
+            if i.name == "t":
+                qec_ideal(qc, pos=pos)
+                T_L(qc, pos=pos)
+            if i.name == "tdg":
+                qec_ideal(qc, pos=pos)
+                adj_T_L(qc, pos=pos)
+            if i.name == "h":
+                H_L(qc, pos=pos)
+    else:
+        for i in instruction:
+            if i.name == "t":
+                T_L(qc, pos=pos)
+            if i.name == "tdg":
+                adj_T_L(qc, pos=pos)
+            if i.name == "h":
+                H_L(qc, pos=pos)
 
 circ = QuantumCircuit(1)
 circ.rz(-np.pi/8, 0)
@@ -176,16 +186,27 @@ approx = generate_basic_approximations(basis, depth=3)
 skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
 adj_rootT = skd(circ)
 
-def adj_root_T_L(qc: QuantumCircuit, pos: int):
+def adj_root_T_L(qc: QuantumCircuit, pos: int, err: False):
     instruction = adj_rootT.data
 
-    for i in instruction:
-        if i.name == "t":
-            T_L(qc, pos=pos)
-        if i.name == "tdg":
-            adj_T_L(qc, pos=pos)
-        if i.name == "h":
-            H_L(qc, pos=pos)
+    if err:
+        for i in instruction:
+            if i.name == "t":
+                qec_ideal(qc, pos=pos)
+                T_L(qc, pos=pos)
+            if i.name == "tdg":
+                qec_ideal(qc, pos=pos)
+                adj_T_L(qc, pos=pos)
+            if i.name == "h":
+                H_L(qc, pos=pos)
+    else:
+        for i in instruction:
+            if i.name == "t":
+                T_L(qc, pos=pos)
+            if i.name == "tdg":
+                adj_T_L(qc, pos=pos)
+            if i.name == "h":
+                H_L(qc, pos=pos)
 
 def CT_L(qc: QuantumCircuit):
     root_T_L(qc, 0)
@@ -587,15 +608,13 @@ def gen_data(name):
         pre.append(preselec), post.append(postselec), one.append(ones), zero.append(zeros)
         ###################################################################################################
         qc = code_goto()
-
         X_L(qc, 1)
         H_L(qc, 0)
         ###############
-        root_T_L(qc, 0)
-        root_T_L(qc, 1)
-        qec(qc,1)
+        root_T_L(qc, 0, err=True)
+        root_T_L(qc, 1, err=True)
         CNOT_L(qc, 0)
-        adj_root_T_L(qc, 1)
+        adj_root_T_L(qc, 1, err=True)
         CNOT_L(qc, 0)
         ################
         adj_T_L(qc, 0)
@@ -613,4 +632,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("Steane_3rd{}.txt".format(name), data, delimiter=",")
+    np.savetxt("Steane_3rd_ideal{}.txt".format(name), data, delimiter=",")
