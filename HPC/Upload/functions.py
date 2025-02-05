@@ -158,7 +158,7 @@ approx = generate_basic_approximations(basis, depth=3)
 skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
 rootT = skd(circ)
 
-def root_T_L(qc: QuantumCircuit, pos: int, err: False):
+def root_T_L(qc: QuantumCircuit, pos: int, err = False):
     instruction = rootT.data
     if err:
         for i in instruction:
@@ -186,7 +186,7 @@ approx = generate_basic_approximations(basis, depth=3)
 skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
 adj_rootT = skd(circ)
 
-def adj_root_T_L(qc: QuantumCircuit, pos: int, err: False):
+def adj_root_T_L(qc: QuantumCircuit, pos: int, err = False):
     instruction = adj_rootT.data
 
     if err:
