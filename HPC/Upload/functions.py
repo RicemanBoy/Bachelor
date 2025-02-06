@@ -83,13 +83,15 @@ def gates(qc:QuantumCircuit):
     return print("Amount of gates in this circuit: ", sum(hmm.values()))
 
 def X_L(qc: QuantumCircuit, pos: int):
-    for i in range(7):
-        qc.x(i+7*pos)
+    qc.x(0+7*pos)
+    qc.x(1+7*pos)
+    qc.x(2+7*pos)
 
 def Z_L(qc: QuantumCircuit, pos: int):
-    for i in range(7):
-        qc.z(i+7*pos)
-    
+    qc.z(0+7*pos)
+    qc.z(1+7*pos)
+    qc.z(2+7*pos)
+
 def H_L(qc: QuantumCircuit, pos: int):
     for i in range(7):
         qc.h(i+7*pos)
@@ -121,9 +123,9 @@ def T_L(qc: QuantumCircuit, pos: int):
     qc.append(h_ideal, [magic])
     qc.t(magic)
 
-    for i in range(7):
-        #qc.cx(i+7*pos,magic)
-        qc.append(cx_ideal,[magic, i+7*pos])
+    qc.append(cx_ideal,[magic, 0+7*pos])
+    qc.append(cx_ideal,[magic, 1+7*pos])
+    qc.append(cx_ideal,[magic, 2+7*pos])
 
     qc.measure(magic,magic)
 
@@ -139,9 +141,9 @@ def adj_T_L(qc: QuantumCircuit, pos: int):
     qc.append(h_ideal, [magic])
     qc.tdg(magic)
 
-    for i in range(7):
-        #qc.cx(i+7*pos,magic)
-        qc.append(cx_ideal,[magic, i+7*pos])
+    qc.append(cx_ideal,[magic, 0+7*pos])
+    qc.append(cx_ideal,[magic, 1+7*pos])
+    qc.append(cx_ideal,[magic, 2+7*pos])
 
     qc.measure(magic,magic)
 
@@ -572,7 +574,7 @@ def qec_ideal(qc: QuantumCircuit, pos: int):
     
 ################################################################################################################################################################
 def gen_data(name):
-    x = np.linspace(0,0.01,10)
+    x = np.linspace(0,0.05,50)
     y = []
     y_no_QEC = []
     one, zero, one_QEC, zero_QEC, pre, post, pre_QEC, post_QEC = [],[],[],[],[],[],[],[]
@@ -647,4 +649,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("Steane_3rd_ideal_leon{}.txt".format(name), data, delimiter=",")
+    np.savetxt("Steane_3rd_5{}.txt".format(name), data, delimiter=",")

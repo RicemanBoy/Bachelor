@@ -11,7 +11,7 @@ for i in range(N):
     file.write('#!/bin/bash -l \n')
     file.write('#SBATCH --ntasks=4 \n')
     file.write('#SBATCH --time=00:10:00 \n' )
-    file.write('#SBATCH --job-name=IQPE_QEC{} \n'.format(i))
+    file.write('#SBATCH --job-name=BScDustin{} \n'.format(i))
     file.write('#SBATCH --export=NONE \n')
     file.write('unset SLURM_EXPORT_ENV \n')
     file.write('module load python/3.10-anaconda \n')
