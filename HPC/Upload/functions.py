@@ -856,7 +856,7 @@ def fullpp(counts: dict, shots: int, cbits: int, two = True):
 def gen_data(name):
     x = np.linspace(0,0.1,20)
     two, no_two = [],[]
-    shots = 100
+    shots = 1000
     for i in x:
         qc, q = code_test(4)
 
@@ -864,7 +864,7 @@ def gen_data(name):
         qec_ideal(qc, q, 0)
         H_L(qc, q, 0)
         qec_ideal(qc, q, 1)
-        CS_L(qc, q)
+        CS_L(qc, q) 
         qec_ideal(qc, q, 2)
         adj_S_L(qc, q, 0)
         qec_ideal(qc, q, 3)
@@ -879,7 +879,7 @@ def gen_data(name):
             success_two = 0.5
         else:
             success_two = (result[3]+ result[4])/(result[5]+result[3]+result[6]+result[4])
-            
+
         if (result_1[5]+result_1[3]+result_1[6]+result_1[4]) == 0:
             success = 0.5
         else:
@@ -889,4 +889,4 @@ def gen_data(name):
         ###################################################################################################
         
     data = np.array((x, two, no_two))
-    np.savetxt("C2_{}.txt".format(name), data, delimiter=",")
+    np.savetxt("C3_{}.txt".format(name), data, delimiter=",")
