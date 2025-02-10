@@ -197,13 +197,18 @@ rootT = skd(circ)
 
 def root_T_L(qc: QuantumCircuit, pos: int, err = False):
     instruction = rootT.data
+    counts = 0
     if err:
         for i in instruction:
             if i.name == "t":
-                z_qec_ideal(qc, pos=pos)
+                if counts%2 == 0:
+                    z_qec_ideal(qc, pos=pos)
+                    counts += 1
                 T_L(qc, pos=pos)
             if i.name == "tdg":
-                z_qec_ideal(qc, pos=pos)
+                if counts%2 == 0:
+                    z_qec_ideal(qc, pos=pos)
+                    counts += 1
                 adj_T_L(qc, pos=pos)
             if i.name == "h":
                 H_L(qc, pos=pos)
@@ -225,14 +230,18 @@ adj_rootT = skd(circ)
 
 def adj_root_T_L(qc: QuantumCircuit, pos: int, err = False):
     instruction = adj_rootT.data
-
+    counts = 0
     if err:
         for i in instruction:
             if i.name == "t":
-                z_qec_ideal(qc, pos=pos)
+                if counts%2 == 0:
+                    z_qec_ideal(qc, pos=pos)
+                    counts += 1
                 T_L(qc, pos=pos)
             if i.name == "tdg":
-                z_qec_ideal(qc, pos=pos)
+                if counts%2 == 0:
+                    z_qec_ideal(qc, pos=pos)
+                    counts += 1
                 adj_T_L(qc, pos=pos)
             if i.name == "h":
                 H_L(qc, pos=pos)
@@ -755,7 +764,7 @@ def z_qec_ideal(qc: QuantumCircuit, pos: int):
 
 ################################################################################################################################################################
 def gen_data(name):
-    x = np.linspace(0,0.05,50)
+    x = np.linspace(0,0.05,25)
     y = []
     y_no_QEC = []
     one, zero, one_QEC, zero_QEC, pre, post, pre_QEC, post_QEC = [],[],[],[],[],[],[],[]
@@ -798,15 +807,15 @@ def gen_data(name):
         H_L(qc, 0)
 
         ###############
-        root_T_L(qc, 0, err=False)
+        root_T_L(qc, 0, err=True)
         qec_ideal(qc, 0)
 
-        root_T_L(qc, 1, err=False)
+        root_T_L(qc, 1, err=True)
         qec_ideal(qc, 1)
 
         CNOT_L(qc, 0)
 
-        adj_root_T_L(qc, 1, err=False)
+        adj_root_T_L(qc, 1, err=True)
         qec_ideal(qc, 1)
 
         CNOT_L(qc, 0)
@@ -830,4 +839,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("Steane_3rd_5_new{}.txt".format(name), data, delimiter=",")
+    np.savetxt("S2_{}.txt".format(name), data, delimiter=",")
