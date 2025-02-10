@@ -28,6 +28,9 @@ def code_goto(n=2):             #encodes |00>_L
     
     anc = qc.num_qubits - 1
 
+    for i in range(7*n):                        #start noise
+        qc.id(i)
+
     for i in range(n):
         # qc.h(0+7*i)                           #funktioniert auch, aber der goto code geht auch, bin bloß dumm
         # qc.h(1+7*i)
@@ -73,6 +76,41 @@ def code_goto(n=2):             #encodes |00>_L
         qc.cx(5+7*i,anc)
         qc.cx(6+7*i,anc)
 
+        qc.id(anc)
+        qc.measure(anc,i)      
+    return qc
+
+def code_goto_test(n=2):             #encodes |00>_L
+    qr = QuantumRegister(7*n+1,"q")
+    cbits = ClassicalRegister(9+6,"c")
+    qc = QuantumCircuit(qr, cbits)
+    
+    anc = qc.num_qubits - 1
+
+    for i in range(n):
+        qc.append(h_ideal, [1+7*i])
+
+        qc.append(h_ideal, [2+7*i])
+        qc.append(h_ideal, [3+7*i])
+
+        qc.append(cx_ideal, [0+7*i, 1+7*i])
+        qc.append(cx_ideal, [5+7*i, 3+7*i])
+
+        qc.append(cx_ideal, [6+7*i, 2+7*i])
+
+        qc.append(cx_ideal, [4+7*i, 1+7*i])
+
+        qc.append(cx_ideal, [0+7*i, 2+7*i])
+        qc.append(cx_ideal, [6+7*i, 3+7*i])
+
+        qc.append(cx_ideal, [5+7*i, 1+7*i])
+
+        qc.append(cx_ideal, [4+7*i, 6+7*i])
+
+        qc.append(cx_ideal, [anc, 0+7*i])
+        qc.append(cx_ideal, [anc, 5+7*i])
+        qc.append(cx_ideal, [anc, 6+7*i])
+
         qc.measure(anc,i)
         qc.reset(anc)        
     return qc
@@ -91,7 +129,7 @@ def Z_L(qc: QuantumCircuit, pos: int):
     qc.z(0+7*pos)
     qc.z(1+7*pos)
     qc.z(2+7*pos)
-
+    
 def H_L(qc: QuantumCircuit, pos: int):
     for i in range(7):
         qc.h(i+7*pos)
@@ -119,7 +157,8 @@ def CNOT_L(qc: QuantumCircuit, control: int):
 
 def T_L(qc: QuantumCircuit, pos: int):
     magic = qc.num_qubits - 1
-
+    
+    qc.reset(magic)
     qc.append(h_ideal, [magic])
     qc.t(magic)
 
@@ -130,14 +169,12 @@ def T_L(qc: QuantumCircuit, pos: int):
     qc.measure(magic,magic)
 
     for i in range(7):
-        with qc.if_test((magic,0)):
-            qc.s(i+7*pos)
-
-    qc.reset(magic)
+        with qc.if_test((magic,1)):
+            qc.sdg(i+7*pos)
 
 def adj_T_L(qc: QuantumCircuit, pos: int):
     magic = qc.num_qubits - 1
-
+    qc.reset(magic)
     qc.append(h_ideal, [magic])
     qc.tdg(magic)
 
@@ -148,10 +185,8 @@ def adj_T_L(qc: QuantumCircuit, pos: int):
     qc.measure(magic,magic)
 
     for i in range(7):
-        with qc.if_test((magic,0)):
-            qc.sdg(i+7*pos)
-
-    qc.reset(magic)
+        with qc.if_test((magic,1)):
+            qc.s(i+7*pos)
 
 circ = QuantumCircuit(1)
 circ.rz(np.pi/8, 0)
@@ -165,10 +200,10 @@ def root_T_L(qc: QuantumCircuit, pos: int, err = False):
     if err:
         for i in instruction:
             if i.name == "t":
-                qec_ideal(qc, pos=pos)
+                z_qec_ideal(qc, pos=pos)
                 T_L(qc, pos=pos)
             if i.name == "tdg":
-                qec_ideal(qc, pos=pos)
+                z_qec_ideal(qc, pos=pos)
                 adj_T_L(qc, pos=pos)
             if i.name == "h":
                 H_L(qc, pos=pos)
@@ -194,10 +229,10 @@ def adj_root_T_L(qc: QuantumCircuit, pos: int, err = False):
     if err:
         for i in instruction:
             if i.name == "t":
-                qec_ideal(qc, pos=pos)
+                z_qec_ideal(qc, pos=pos)
                 T_L(qc, pos=pos)
             if i.name == "tdg":
-                qec_ideal(qc, pos=pos)
+                z_qec_ideal(qc, pos=pos)
                 adj_T_L(qc, pos=pos)
             if i.name == "h":
                 H_L(qc, pos=pos)
@@ -230,7 +265,7 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     p_error_2 = pauli_error([["XI",p/4],["IX",p/4],["II",1-p],["ZI",p/4],["IZ",p/4]])
 
     noise_model = NoiseModel()
-    noise_model.add_all_qubit_quantum_error(p_error, ['x', "z", 'h', "s", "sdg", "measure", "reset"])  # Apply to single-qubit gates
+    noise_model.add_all_qubit_quantum_error(p_error, ['x', "z", 'h', "s", "sdg", "id"])  # Apply to single-qubit gates
     noise_model.add_all_qubit_quantum_error(p_error_2, ['cx'])  # Apply to 2-qubit gates
 
     # depolarizing_prob = noise
@@ -243,9 +278,11 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     
     if pos == 0:
         for i in range(7):
+            qc.id(i)
             qc.measure(i,14-i)
     elif pos == 1:
         for i in range(7):
+            qc.id(i+7)
             qc.measure(7+i,14-i)
 
     sim = AerSimulator()
@@ -313,30 +350,37 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
 def qec(qc: QuantumCircuit, pos: int):
     anc = qc.num_qubits - 1
     qc.reset(anc)
+    qc.id(anc)
     ##################################Z-Stabilizers##########################################
     qc.cx(0+7*pos, anc)
     qc.cx(2+7*pos, anc)
     qc.cx(4+7*pos, anc)
     qc.cx(6+7*pos, anc)
 
+    qc.id(anc)
     qc.measure(anc, 2)
     qc.reset(anc)
+    qc.id(anc)
 
     qc.cx(1+7*pos, anc)
     qc.cx(2+7*pos, anc)
     qc.cx(5+7*pos, anc)
     qc.cx(6+7*pos, anc)
 
+    qc.id(anc)
     qc.measure(anc, 1)
     qc.reset(anc)
+    qc.id(anc)
 
     qc.cx(3+7*pos, anc)
     qc.cx(4+7*pos, anc)
     qc.cx(5+7*pos, anc)
     qc.cx(6+7*pos, anc)
 
+    qc.id(anc)
     qc.measure(anc, 0)
     qc.reset(anc)
+    qc.id(anc)
     ##################################X-Stabilizers##############################################
     qc.h(anc)
     qc.cx(anc, 0+7*pos)
@@ -345,8 +389,10 @@ def qec(qc: QuantumCircuit, pos: int):
     qc.cx(anc, 6+7*pos)
     qc.h(anc)
 
+    qc.id(anc)
     qc.measure(anc, 5)
     qc.reset(anc)
+    qc.id(anc)
 
     qc.h(anc)
     qc.cx(anc, 1+7*pos)
@@ -355,8 +401,10 @@ def qec(qc: QuantumCircuit, pos: int):
     qc.cx(anc, 6+7*pos)
     qc.h(anc)
 
+    qc.id(anc)
     qc.measure(anc, 4)
     qc.reset(anc)
+    qc.id(anc)
 
     qc.h(anc)
     qc.cx(anc, 3+7*pos)
@@ -365,6 +413,7 @@ def qec(qc: QuantumCircuit, pos: int):
     qc.cx(anc, 6+7*pos)
     qc.h(anc)
 
+    qc.id(anc)
     qc.measure(anc, 3)
     qc.reset(anc)
     ##################################Bitflip Error correction##############################################
@@ -571,7 +620,139 @@ def qec_ideal(qc: QuantumCircuit, pos: int):
         with qc.if_test((6,1)):
             with qc.if_test((7,1)):
                 qc.append(z_ideal,[6+7*pos])
+
+def z_qec(qc: QuantumCircuit, pos: int):
+    anc = qc.num_qubits - 1
+    qc.reset(anc)
+    qc.id(anc)
+
+    qc.cx(0+7*pos, anc)
+    qc.cx(2+7*pos, anc)
+    qc.cx(4+7*pos, anc)
+    qc.cx(6+7*pos, anc)
+
+    qc.id(anc)
+    qc.measure(anc, 2)
+    qc.reset(anc)
+    qc.id(anc)
+
+    qc.cx(1+7*pos, anc)
+    qc.cx(2+7*pos, anc)
+    qc.cx(5+7*pos, anc)
+    qc.cx(6+7*pos, anc)
+
+    qc.id(anc)
+    qc.measure(anc, 1)
+    qc.reset(anc)
+    qc.id(anc)
+
+    qc.cx(3+7*pos, anc)
+    qc.cx(4+7*pos, anc)
+    qc.cx(5+7*pos, anc)
+    qc.cx(6+7*pos, anc)
+
+    qc.id(anc)
+    qc.measure(anc, 0)
+    qc.reset(anc)
+
+    with qc.if_test((0,0)):             #qbit 0
+        with qc.if_test((1,0)):
+            with qc.if_test((2,1)):
+                qc.x(0+7*pos)
+
+    with qc.if_test((0,0)):             #qbit 1
+        with qc.if_test((1,1)):
+            with qc.if_test((2,0)):
+                qc.x(1+7*pos)
     
+    with qc.if_test((0,0)):             #qbit 2
+        with qc.if_test((1,1)):
+            with qc.if_test((2,1)):
+                qc.x(2+7*pos)
+    
+    with qc.if_test((0,1)):             #qbit 3
+        with qc.if_test((1,0)):
+            with qc.if_test((2,0)):
+                qc.x(3+7*pos)
+    
+    with qc.if_test((0,1)):             #qbit 4
+        with qc.if_test((1,0)):
+            with qc.if_test((2,1)):
+                qc.x(4+7*pos)
+    
+    with qc.if_test((0,1)):             #qbit 5
+        with qc.if_test((1,1)):
+            with qc.if_test((2,0)):
+                qc.x(5+7*pos)
+    
+    with qc.if_test((0,1)):             #qbit 6
+        with qc.if_test((1,1)):
+            with qc.if_test((2,1)):
+                qc.x(6+7*pos)
+
+def z_qec_ideal(qc: QuantumCircuit, pos: int):
+    anc = qc.num_qubits - 1
+    qc.reset(anc)
+    ##################################Z-Stabilizers##########################################
+    qc.append(cx_ideal, [anc, 0+7*pos])
+    qc.append(cx_ideal, [anc, 2+7*pos])
+    qc.append(cx_ideal, [anc, 4+7*pos])
+    qc.append(cx_ideal, [anc, 6+7*pos])
+
+    qc.measure(anc, 4)
+    qc.reset(anc)
+
+    qc.append(cx_ideal, [anc, 1+7*pos])
+    qc.append(cx_ideal, [anc, 2+7*pos])
+    qc.append(cx_ideal, [anc, 5+7*pos])
+    qc.append(cx_ideal, [anc, 6+7*pos])
+
+    qc.measure(anc, 3)
+    qc.reset(anc)
+
+    qc.append(cx_ideal, [anc, 3+7*pos])
+    qc.append(cx_ideal, [anc, 4+7*pos])
+    qc.append(cx_ideal, [anc, 5+7*pos])
+    qc.append(cx_ideal, [anc, 6+7*pos])
+
+    qc.measure(anc, 2)
+    qc.reset(anc)
+    ##################################Bitflip Error correction##############################################
+    with qc.if_test((2,0)):             #qbit 0
+        with qc.if_test((3,0)):
+            with qc.if_test((4,1)):
+                qc.append(x_ideal,[0+7*pos])
+
+    with qc.if_test((2,0)):             #qbit 1
+        with qc.if_test((3,1)):
+            with qc.if_test((4,0)):
+                qc.append(x_ideal,[1+7*pos])
+    
+    with qc.if_test((2,0)):             #qbit 2
+        with qc.if_test((3,1)):
+            with qc.if_test((4,1)):
+                qc.append(x_ideal,[2+7*pos])
+    
+    with qc.if_test((2,1)):             #qbit 3
+        with qc.if_test((3,0)):
+            with qc.if_test((4,0)):
+                qc.append(x_ideal,[3+7*pos])
+    
+    with qc.if_test((2,1)):             #qbit 4
+        with qc.if_test((3,0)):
+            with qc.if_test((4,1)):
+                qc.append(x_ideal,[4+7*pos])
+    
+    with qc.if_test((2,1)):             #qbit 5
+        with qc.if_test((3,1)):
+            with qc.if_test((4,0)):
+                qc.append(x_ideal,[5+7*pos])
+    
+    with qc.if_test((2,1)):             #qbit 6
+        with qc.if_test((3,1)):
+            with qc.if_test((4,1)):
+                qc.append(x_ideal,[6+7*pos])
+
 ################################################################################################################################################################
 def gen_data(name):
     x = np.linspace(0,0.05,50)
@@ -649,4 +830,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("Steane_3rd_5{}.txt".format(name), data, delimiter=",")
+    np.savetxt("Steane_3rd_5_new{}.txt".format(name), data, delimiter=",")
