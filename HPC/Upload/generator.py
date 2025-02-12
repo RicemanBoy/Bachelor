@@ -1,4 +1,4 @@
-N=100
+N=1000
 
 for i in range(N):
     file=open('{}.py'.format(i), 'a')
