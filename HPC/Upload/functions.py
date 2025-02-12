@@ -1268,12 +1268,16 @@ def gates(qc:QuantumCircuit):
 def gen_data(name):
     x = np.linspace(0,0.05,10)
     one, zero, post, one_QEC, zero_QEC, post_QEC = [],[],[],[],[],[]
-    shots = 10
+    shots = 100
     for i in x:
         qc = rot_surf_code(2)
 
+        qec_ideal(qc, False, 0)
+        qec_ideal(qc, False, 1)
+
         X_L(qc, False, 1)
         H_L(qc, pos=0)
+        qec_ideal(qc, True, 0)
         ################################################
         CT_L(qc, "10", qec=True)
         ################################################
@@ -1300,4 +1304,4 @@ def gen_data(name):
         one.append(ones), zero.append(zeros), post.append(err)
 
     data = np.array((x,zero,one,post,zero_QEC,one_QEC,post_QEC))
-    np.savetxt("RotSurf_3rd_a){}.txt".format(name), data, delimiter=",")
+    np.savetxt("RotSurf_3rd_c){}.txt".format(name), data, delimiter=",")
