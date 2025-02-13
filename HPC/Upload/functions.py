@@ -1276,6 +1276,7 @@ def gen_data(name):
         qec_ideal(qc, False, 1)
 
         X_L(qc, False, 1)
+        qec_ideal(qc, False, 1)
         H_L(qc, pos=0)
         qec_ideal(qc, True, 0)
         ################################################
@@ -1285,6 +1286,7 @@ def gen_data(name):
         adj_T_L(qc, True, 0)
         qec_ideal(qc, True, 0)
         H_L(qc ,pos=0)
+        qec_ideal(qc, True, 0)
 
         zeros, ones, err = readout_new(qc, had=2, pos=0, shots=shots, noise=i)
 
@@ -1304,4 +1306,4 @@ def gen_data(name):
         one.append(ones), zero.append(zeros), post.append(err)
 
     data = np.array((x,zero,one,post,zero_QEC,one_QEC,post_QEC))
-    np.savetxt("RotSurf_3rd_c){}.txt".format(name), data, delimiter=",")
+    np.savetxt("RotSurf_3rd_d){}.txt".format(name), data, delimiter=",")
