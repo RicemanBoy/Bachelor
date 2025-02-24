@@ -61,13 +61,16 @@ def CNOT_L(qc: QuantumCircuit, q: list, control = 0):
         q[4], q[6] = q[6], q[4]
         q[8], q[10] = q[10], q[8]
 
-def H_L(qc: QuantumCircuit, q: list, pos: int):
-    anc = qc.num_qubits - 1
+def H_L(qc: QuantumCircuit, q: list, pos: int, m:list, tracker, z_stab = True):                 #state injection vom hadamard für einzelnes hadamard
+    anc = qc.num_qubits - 2
     cbits = qc.num_clbits - 1
     if pos != 2:
         qc.reset(anc)
-        
+    
         Z_L(qc, q, pos=pos)
+
+        if z_stab:
+            z_qec_ideal(qc, q=q, m=m, tracker=tracker)
 
         if pos == 0:                  #hier zu Z_L
             qc.cx(q[0], anc)
@@ -80,6 +83,8 @@ def H_L(qc: QuantumCircuit, q: list, pos: int):
             qc.cx(q[9], anc)
             qc.cx(q[10], anc)
         qc.h(anc)
+        if z_stab:
+            z_qec_ideal(qc, q, m, tracker)
         if pos == 0:
             qc.cx(anc, q[0])
             qc.cx(anc, q[3])
@@ -128,13 +133,14 @@ def CZ_L(qc: QuantumCircuit, q:list):
     CNOT_L(qc, q, 1)
     H_L(qc, q, 0)
 
-def S_L(qc: QuantumCircuit, q: list, pos: int):
-    anc = qc.num_qubits - 1
+def S_L(qc: QuantumCircuit, q: list, pos: int, m: list, tracker, z_stab = True):
+    anc = qc.num_qubits - 2
     cbits = qc.num_clbits - 1
     qc.reset(anc)
     qc.append(h_ideal,[anc])
     qc.s(anc)
-
+    if z_stab:
+        z_qec_ideal(qc, q, m, tracker)
     if pos == 0:                        #zu Z_L
         qc.cx(q[0], anc)
         qc.cx(q[3], anc)
@@ -160,13 +166,16 @@ def S_L(qc: QuantumCircuit, q: list, pos: int):
             qc.z(q[1])
             qc.z(q[10])
 
-def adj_S_L(qc: QuantumCircuit, q: list, pos: int):
-    anc = qc.num_qubits - 1
+def adj_S_L(qc: QuantumCircuit, q: list, pos: int, m:list, tracker, z_stab=True):
+    anc = qc.num_qubits - 2
     cbits = qc.num_clbits - 1
     qc.reset(anc)
     qc.append(h_ideal,[anc])
     qc.sdg(anc)
 
+    if z_stab:
+        z_qec_ideal(qc, q, m, tracker)
+
     if pos == 0:                        #zu Z_L
         qc.cx(q[0], anc)
         qc.cx(q[3], anc)
@@ -192,12 +201,15 @@ def adj_S_L(qc: QuantumCircuit, q: list, pos: int):
             qc.z(q[1])
             qc.z(q[10])
 
-def T_L(qc: QuantumCircuit, q: list, pos: int):
-    anc = qc.num_qubits - 1
+def T_L(qc: QuantumCircuit, q: list, pos: int, m: list, tracker, z_stab = True):
+    anc = qc.num_qubits - 2
     cbits = qc.num_clbits - 1
     qc.reset(anc)
     qc.append(h_ideal,[anc])
     qc.t(anc)
+
+    if z_stab:
+        z_qec_ideal(qc, q, m, tracker)
 
     if pos == 0:                        #zu Z_L
         qc.cx(q[0], anc)
@@ -211,6 +223,8 @@ def T_L(qc: QuantumCircuit, q: list, pos: int):
         qc.cx(q[10], anc)
 
     qc.measure(anc,cbits)
+    if z_stab:
+        z_qec_ideal(qc, q, m, tracker)
     if pos == 0:
         with qc.if_test((cbits,1)):
             qc.reset(anc)
@@ -242,12 +256,15 @@ def T_L(qc: QuantumCircuit, q: list, pos: int):
                 qc.z(q[9])
                 qc.z(q[10])
 
-def adj_T_L(qc: QuantumCircuit, q: list, pos: int):
-    anc = qc.num_qubits - 1
+def adj_T_L(qc: QuantumCircuit, q: list, pos: int, m: list, tracker, z_stab = True):
+    anc = qc.num_qubits - 2
     cbits = qc.num_clbits - 1
     qc.reset(anc)
     qc.append(h_ideal,[anc])
     qc.tdg(anc)
+
+    if z_stab:
+        z_qec_ideal(qc, q, m, tracker)
 
     if pos == 0:                        #zu Z_L
         qc.cx(q[0], anc)
@@ -260,9 +277,12 @@ def adj_T_L(qc: QuantumCircuit, q: list, pos: int):
         qc.cx(q[9], anc)
         qc.cx(q[10], anc)
 
+    # if z_stab:
+    #     z_qec_ideal(qc, q, m, tracker)
+
     qc.measure(anc,cbits )
     if pos == 0:
-        with qc.if_test((cbits ,1)):
+        with qc.if_test((cbits, 1)):
             qc.reset(anc)
             qc.append(h_ideal,[anc])
             qc.sdg(anc)
@@ -277,7 +297,7 @@ def adj_T_L(qc: QuantumCircuit, q: list, pos: int):
                 qc.z(q[9])
                 qc.z(q[11])
     elif pos == 1:
-        with qc.if_test((cbits ,1)):
+        with qc.if_test((cbits, 1)):
             qc.reset(anc)
             qc.append(h_ideal,[anc])
             qc.sdg(anc)
@@ -286,7 +306,7 @@ def adj_T_L(qc: QuantumCircuit, q: list, pos: int):
             qc.cx(q[9], anc)
             qc.cx(q[10], anc)
             qc.measure(anc,cbits )
-            with qc.if_test((cbits ,1)):
+            with qc.if_test((cbits, 1)):
                 qc.z(q[0])
                 qc.z(q[1])
                 qc.z(q[9])
@@ -299,27 +319,15 @@ approx = generate_basic_approximations(basis, depth=3)
 skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
 rootT = skd(circ)
 
-def root_T_L(qc: QuantumCircuit, q: list, pos: int, m: list, tracker, err = False):
+def root_T_L(qc: QuantumCircuit, q: list, pos: int, m: list, tracker, z_stab = False):
     instruction = rootT.data
-    n = m[0]
-    if err:
-        for i in instruction:
-            if i.name == "t":
-                T_L(qc, q, pos=pos)
-                z_qec_ideal(qc, q, m, tracker)
-            if i.name == "tdg":
-                adj_T_L(qc, q, pos=pos)
-                z_qec_ideal(qc, q, m, tracker)
-            if i.name == "h":
-                H_L(qc, q, pos=pos)
-    else:
-        for i in instruction:
-            if i.name == "t":
-                T_L(qc, q, pos=pos)
-            if i.name == "tdg":
-                adj_T_L(qc, q, pos=pos)
-            if i.name == "h":
-                H_L(qc, q, pos=pos)
+    for i in instruction:
+        if i.name == "t":
+            T_L(qc, q, pos=pos, m=m, tracker=tracker, z_stab=z_stab)
+        if i.name == "tdg":
+            adj_T_L(qc, q, pos=pos, m=m, tracker=tracker, z_stab=z_stab)
+        if i.name == "h":
+            H_L(qc, q, pos=pos, m=m, tracker=tracker, z_stab=z_stab)
 
 circ = QuantumCircuit(1)
 circ.rz(-np.pi/8, 0)
@@ -328,42 +336,23 @@ approx = generate_basic_approximations(basis, depth=3)
 skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
 rootadjT = skd(circ)
 
-def adj_root_T_L(qc: QuantumCircuit, q: list, pos: int, m:list, tracker, err=False):
+def adj_root_T_L(qc: QuantumCircuit, q: list, pos: int, m:list, tracker, z_stab=False):
     instruction = rootadjT.data
-    if err:
-        for i in instruction:
-            if i.name == "t":
-                T_L(qc, q, pos=pos)
-                z_qec_ideal(qc, q, m, tracker)
-            if i.name == "tdg":
-                adj_T_L(qc, q, pos=pos)
-                z_qec_ideal(qc, q, m, tracker)
-            if i.name == "h":
-                H_L(qc, q, pos=pos)
-    else:
-        for i in instruction:
-            if i.name == "t":
-                T_L(qc, q, pos=pos)
-            if i.name == "tdg":
-                adj_T_L(qc, q, pos=pos)
-            if i.name == "h":
-                H_L(qc, q, pos=pos)
+    for i in instruction:
+        if i.name == "t":
+            T_L(qc, q, pos=pos, m=m, tracker=tracker, z_stab=z_stab)
+        if i.name == "tdg":
+            adj_T_L(qc, q, pos=pos, m=m, tracker=tracker, z_stab=z_stab)
+        if i.name == "h":
+            H_L(qc, q, pos=pos, m=m, tracker=tracker, z_stab=z_stab)
 
 def CT_L(qc: QuantumCircuit, q: list, n: list, tracker, err = False):
-    if err:
-        root_T_L(qc, q, 0, n, tracker, True)
-        root_T_L(qc, q, 1, n, tracker, True)
-        CNOT_L(qc, q, 0)
-        adj_root_T_L(qc, q, 1, n, tracker, True)
-        CNOT_L(qc, q, 0)
-    else:
-        root_T_L(qc, q, 0, n, tracker)
-        root_T_L(qc, q, 1, n, tracker)
-        CNOT_L(qc, q, 0)
-        adj_root_T_L(qc, q, 1, n, tracker)
-        CNOT_L(qc, q, 0)
-    return tracker
-
+    root_T_L(qc, q, 0, n, tracker, z_stab = err)
+    root_T_L(qc, q, 1, n, tracker, z_stab = err)
+    CNOT_L(qc, q, 0)
+    adj_root_T_L(qc, q, 1, n, tracker, z_stab = err)
+    CNOT_L(qc, q, 0)
+    
 def CS_L(qc: QuantumCircuit, q: list):
     T_L(qc, q, 0)
     T_L(qc, q, 1)
@@ -585,7 +574,7 @@ def qec(qc: QuantumCircuit, q: list):
                 with qc.if_test((28,1)):
                     qc.z(q[11])
 
-def code_test(n: int):                                     #intialize |00> state   ,   n = 2*#qec + #z_qec
+def code_test(n: int):                                     #initialize |00> state   ,   n = 2*#qec + #z_qec
     qr = QuantumRegister(15,"q")
     cbits = ClassicalRegister(19+n*5,"c")             #12(Auslesen am Ende) + 7(Preselection) + 5n(Stabilizers) = 19 + 5*n insgesamt
     qc = QuantumCircuit(qr, cbits)
@@ -696,7 +685,8 @@ def sortout(c_register: list, tracker):
         if i == "z":
             if done == 0:
                 hmm = [j[-5:] for j in check]
-            hmm = [j[-done-5:-done] for j in check]
+            else:
+                hmm = [j[-done-5:-done] for j in check]
             done += 5
             for j in range(len(hmm)):
                 for k in z_ref:
@@ -1063,6 +1053,7 @@ def readout_2(qc: QuantumCircuit, shots: int, q: list, noise = 0):
     job = sim.run(qc, shots=shots, noise_model = noise_model)
     result = job.result()
     counts = result.get_counts()
+
     return counts, cbits
 
 def fullpp(counts: dict, shots: int, cbits: int, track, two = True):
@@ -1162,77 +1153,48 @@ def fullpp(counts: dict, shots: int, cbits: int, track, two = True):
 
 ################################################################################################################################################################
 def gen_data(name):
-    # x = np.linspace(0,0.03,20)
-    # pre, post, nn, ne, en, ee, pre2, two, post2, nn2, ne2, ee2, en2 = [],[],[],[],[],[],[],[],[],[],[],[],[]
-    # shots = 100
-    # for i in x:
-    #     qc, q, tracker = code_test(0)
-
-    #     n = [0]
-
-    #     X_L(qc, q, 1)
-    #     H_L(qc, q, 0)
-    #     CT_L(qc, q, n, tracker, False)
-    #     adj_T_L(qc, q, 0)
-    #     H_L(qc, q, 0)
-
-    #     counts, cbits = readout_2(qc, shots, q, i)
-
-    #     result = fullpp(counts, shots, cbits, tracker, False)
-
-    #     pre.append(result[0]), post.append(result[2]), nn.append(result[3]), ne.append(result[4]), en.append(result[5]), ee.append(result[6])
-
-    # ###############################################################################################################
-
-    #     qc, q, tracker = code_test(36)
-
-    #     n = [0]
-    #     qec_ideal(qc, q, n, tracker)
-    #     X_L(qc, q, 1)
-    #     qec_ideal(qc, q, n, tracker)
-    #     H_L(qc, q, 0)
-    #     qec_ideal(qc, q, n, tracker)
-    #     CT_L(qc, q, n, tracker, True)
-    #     qec_ideal(qc, q, n, tracker)
-    #     adj_T_L(qc, q, 0)
-    #     qec_ideal(qc, q, n, tracker)
-    #     H_L(qc, q, 0)
-    #     qec_ideal(qc, q, n, tracker)
-
-    #     counts, cbits = readout_2(qc, shots, q, i)
-
-    #     result_1 = fullpp(counts, shots, cbits, tracker)
-
-    #     pre2.append(result_1[0]), two.append(result_1[1]), post2.append(result_1[2]), nn2.append(result_1[3]), ne2.append(result_1[4]), en2.append(result_1[5]), ee2.append(result_1[6])
-
-    #     data = np.array((x,pre,post,nn,ne,en,ee,pre2,two,post2,nn2,ne2,en2,ee2))
-    # np.savetxt("Carbon_3rd_2{}.txt".format(name), data, delimiter=",")
-    x = np.linspace(0,0.03,20)
-    pre, post, nn, ne, en, ee, pre2, two, post2, nn2, ne2, ee2, en2 = [],[],[],[],[],[],[],[],[],[],[],[],[]
+    x = np.linspace(0,0.02,20)
     shots = 100
+    pre, post, nn, ne, en, ee, pre2, two, post2, nn2, ne2, ee2, en2 = [],[],[],[],[],[],[],[],[],[],[],[],[]
     for i in x:
-        qc, q, tracker = code_test(36)
+        qc, q, tracker = code_test(0)
+
+        n = [0]
+        X_L(qc, q, 1)
+        H_L(qc, q, 0, n, tracker=tracker, z_stab=False)
+        CT_L(qc, q, n, tracker, err=False)
+        adj_T_L(qc, q, 0, n, tracker,z_stab=False)
+        H_L(qc, q, 0,n, tracker=tracker, z_stab=False)
+
+        counts, cbits = readout_2(qc, shots, q, i)
+
+        result = fullpp(counts, shots, cbits, tracker, False)
+
+        nice, total = result[3] + result[4], result[3] + result[6] + result[4] + result[5]
+
+        pre.append(result[0]), post.append(result[2]), nn.append(result[3]), ne.append(result[4]), en.append(result[5]), ee.append(result[6])
+
+        ###############################################################################################################
+
+        qc, q, tracker = code_test(101)
 
         n = [0]
         qec_ideal(qc, q, n, tracker)
         X_L(qc, q, 1)
         qec_ideal(qc, q, n, tracker)
-        H_L(qc, q, 0)
+        H_L(qc, q, 0, n, tracker=tracker, z_stab=True)
         qec_ideal(qc, q, n, tracker)
-        CT_L(qc, q, n, tracker, True)
+        CT_L(qc, q, n, tracker, err=True)
         qec_ideal(qc, q, n, tracker)
-        adj_T_L(qc, q, 0)
+        adj_T_L(qc, q, 0, n, tracker,z_stab=True)
         qec_ideal(qc, q, n, tracker)
-        H_L(qc, q, 0)
-        qec_ideal(qc, q, n, tracker)
+        H_L(qc, q, 0,n, tracker=tracker, z_stab=True)
 
         counts, cbits = readout_2(qc, shots, q, i)
 
         result_1 = fullpp(counts, shots, cbits, tracker)
-        result = fullpp(counts, shots, cbits, tracker, False)
-        
-        pre.append(result[0]), post.append(result[2]), nn.append(result[3]), ne.append(result[4]), en.append(result[5]), ee.append(result[6])
+
         pre2.append(result_1[0]), two.append(result_1[1]), post2.append(result_1[2]), nn2.append(result_1[3]), ne2.append(result_1[4]), en2.append(result_1[5]), ee2.append(result_1[6])
 
-        data = np.array((x,pre,post,nn,ne,en,ee,pre2,two,post2,nn2,ne2,en2,ee2))
-    np.savetxt("Carbon_3rd_3{}.txt".format(name), data, delimiter=",")
+    data = np.array((x,pre,post,nn,ne,en,ee,pre2,two,post2,nn2,ne2,en2,ee2))
+    np.savetxt("Carbon_3rd_4{}.txt".format(name), data, delimiter=",")
