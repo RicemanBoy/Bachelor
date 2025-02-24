@@ -21,111 +21,12 @@ x_ideal = UnitaryGate(matrix_x)
 matrix_z = ([[1,0],[0,-1]])
 z_ideal = UnitaryGate(matrix_z)
 ################################################################################################################################################################
+
 def idk(new: list, a: list, b:list, c:list):
     for i in a:
         for j in b:
             for k in c:
                 new.append(i+j+k)
-
-def code():                                     #intialize |00> state
-    qr = QuantumRegister(15,"q")
-    cbits = ClassicalRegister(29,"c")             #12(Auslesen am Ende) + 7(Preselection) + 5(Stabilizers) = 24 insgesamt
-    qc = QuantumCircuit(qr, cbits)
-
-    q = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
-
-    for i in range(12):
-        qc.id(i)
-
-    qc.h(0)
-    qc.h(1)
-    qc.h(2)
-    qc.h(7)
-    qc.h(11)
-    qc.h(12)
-
-    qc.cx(12,3)
-    qc.cx(7,13)
-    qc.cx(11,14)
-
-
-    qc.cx(0,3)
-    qc.cx(1,3)
-    qc.cx(2,3)
-
-    qc.cx(7,4)
-    qc.cx(7,5)
-    qc.cx(7,6)
-
-    qc.cx(11,8)
-    qc.cx(11,9)
-    qc.cx(11,10)
-
-    qc.cx(12,3)
-    qc.cx(7,13)
-    qc.cx(11,14)
-
-    qc.h(12)
-    qc.id(12)
-    qc.measure(12,0)
-    qc.id(13)
-    qc.measure(13,1)
-    qc.id(14)
-    qc.measure(14,2)
-
-    qc.reset(12)
-    qc.reset(13)
-    qc.reset(14)
-    ####################################################
-    for i in range(8):
-        qc.cx(i,i+4)
-    ####################################################
-    qc.h(12)
-
-    qc.cx(12,4)
-    qc.cx(7,13)
-    qc.cx(12,7)
-    qc.cx(4,13)
-    qc.cx(12,5)
-    qc.cx(6,13)
-    qc.cx(12,6)
-    qc.cx(5,13)
-
-    qc.h(12)
-    qc.id(12)
-    qc.measure(12,3)
-    qc.id(13)
-    qc.measure(13,4)
-
-    qc.reset(12)
-    qc.reset(13)
-    
-    ####################################################
-    qc.h(12)
-
-    qc.cx(12,13)
-    qc.cx(8,13)
-    qc.cx(10,12)
-    qc.cx(9,12)
-    qc.cx(11,13)
-    qc.cx(12,13)
-
-    qc.h(12)
-    qc.id(12)
-    qc.measure(12,5)
-    qc.id(13)
-    qc.measure(13,6)
-
-    qc.reset(12)
-    qc.reset(13)
-
-    q[5],q[7] = q[7],q[5]
-    q[6],q[7] = q[7],q[6]
-
-    q[9],q[10] = q[10],q[9]
-    q[10],q[11] = q[11],q[10]
-    
-    return qc, q
 
 def X_L(qc: QuantumCircuit, q: list, pos: int):
     qc.x(q[3])
@@ -160,13 +61,16 @@ def CNOT_L(qc: QuantumCircuit, q: list, control = 0):
         q[4], q[6] = q[6], q[4]
         q[8], q[10] = q[10], q[8]
 
-def H_L(qc: QuantumCircuit, q: list, pos: int):
-    anc = qc.num_qubits - 1
+def H_L(qc: QuantumCircuit, q: list, pos: int, m:list, tracker, z_stab = True):                 #state injection vom hadamard für einzelnes hadamard
+    anc = qc.num_qubits - 2
     cbits = qc.num_clbits - 1
     if pos != 2:
         qc.reset(anc)
-        
+    
         Z_L(qc, q, pos=pos)
+
+        if z_stab:
+            z_qec_ideal(qc, q=q, m=m, tracker=tracker)
 
         if pos == 0:                  #hier zu Z_L
             qc.cx(q[0], anc)
@@ -179,6 +83,8 @@ def H_L(qc: QuantumCircuit, q: list, pos: int):
             qc.cx(q[9], anc)
             qc.cx(q[10], anc)
         qc.h(anc)
+        if z_stab:
+            z_qec_ideal(qc, q, m, tracker)
         if pos == 0:
             qc.cx(anc, q[0])
             qc.cx(anc, q[3])
@@ -227,13 +133,14 @@ def CZ_L(qc: QuantumCircuit, q:list):
     CNOT_L(qc, q, 1)
     H_L(qc, q, 0)
 
-def S_L(qc: QuantumCircuit, q: list, pos: int):
-    anc = qc.num_qubits - 1
+def S_L(qc: QuantumCircuit, q: list, pos: int, m: list, tracker, z_stab = True):
+    anc = qc.num_qubits - 2
     cbits = qc.num_clbits - 1
     qc.reset(anc)
     qc.append(h_ideal,[anc])
     qc.s(anc)
-
+    if z_stab:
+        z_qec_ideal(qc, q, m, tracker)
     if pos == 0:                        #zu Z_L
         qc.cx(q[0], anc)
         qc.cx(q[3], anc)
@@ -259,13 +166,16 @@ def S_L(qc: QuantumCircuit, q: list, pos: int):
             qc.z(q[1])
             qc.z(q[10])
 
-def adj_S_L(qc: QuantumCircuit, q: list, pos: int):
-    anc = qc.num_qubits - 1
+def adj_S_L(qc: QuantumCircuit, q: list, pos: int, m:list, tracker, z_stab=True):
+    anc = qc.num_qubits - 2
     cbits = qc.num_clbits - 1
     qc.reset(anc)
     qc.append(h_ideal,[anc])
     qc.sdg(anc)
 
+    if z_stab:
+        z_qec_ideal(qc, q, m, tracker)
+
     if pos == 0:                        #zu Z_L
         qc.cx(q[0], anc)
         qc.cx(q[3], anc)
@@ -291,12 +201,15 @@ def adj_S_L(qc: QuantumCircuit, q: list, pos: int):
             qc.z(q[1])
             qc.z(q[10])
 
-def T_L(qc: QuantumCircuit, q: list, pos: int):
-    anc = qc.num_qubits - 1
+def T_L(qc: QuantumCircuit, q: list, pos: int, m: list, tracker, z_stab = True):
+    anc = qc.num_qubits - 2
     cbits = qc.num_clbits - 1
     qc.reset(anc)
     qc.append(h_ideal,[anc])
     qc.t(anc)
+
+    if z_stab:
+        z_qec_ideal(qc, q, m, tracker)
 
     if pos == 0:                        #zu Z_L
         qc.cx(q[0], anc)
@@ -310,6 +223,8 @@ def T_L(qc: QuantumCircuit, q: list, pos: int):
         qc.cx(q[10], anc)
 
     qc.measure(anc,cbits)
+    if z_stab:
+        z_qec_ideal(qc, q, m, tracker)
     if pos == 0:
         with qc.if_test((cbits,1)):
             qc.reset(anc)
@@ -341,12 +256,15 @@ def T_L(qc: QuantumCircuit, q: list, pos: int):
                 qc.z(q[9])
                 qc.z(q[10])
 
-def adj_T_L(qc: QuantumCircuit, q: list, pos: int):
-    anc = qc.num_qubits - 1
+def adj_T_L(qc: QuantumCircuit, q: list, pos: int, m: list, tracker, z_stab = True):
+    anc = qc.num_qubits - 2
     cbits = qc.num_clbits - 1
     qc.reset(anc)
     qc.append(h_ideal,[anc])
     qc.tdg(anc)
+
+    if z_stab:
+        z_qec_ideal(qc, q, m, tracker)
 
     if pos == 0:                        #zu Z_L
         qc.cx(q[0], anc)
@@ -359,9 +277,12 @@ def adj_T_L(qc: QuantumCircuit, q: list, pos: int):
         qc.cx(q[9], anc)
         qc.cx(q[10], anc)
 
+    # if z_stab:
+    #     z_qec_ideal(qc, q, m, tracker)
+
     qc.measure(anc,cbits )
     if pos == 0:
-        with qc.if_test((cbits ,1)):
+        with qc.if_test((cbits, 1)):
             qc.reset(anc)
             qc.append(h_ideal,[anc])
             qc.sdg(anc)
@@ -376,7 +297,7 @@ def adj_T_L(qc: QuantumCircuit, q: list, pos: int):
                 qc.z(q[9])
                 qc.z(q[11])
     elif pos == 1:
-        with qc.if_test((cbits ,1)):
+        with qc.if_test((cbits, 1)):
             qc.reset(anc)
             qc.append(h_ideal,[anc])
             qc.sdg(anc)
@@ -385,12 +306,53 @@ def adj_T_L(qc: QuantumCircuit, q: list, pos: int):
             qc.cx(q[9], anc)
             qc.cx(q[10], anc)
             qc.measure(anc,cbits )
-            with qc.if_test((cbits ,1)):
+            with qc.if_test((cbits, 1)):
                 qc.z(q[0])
                 qc.z(q[1])
                 qc.z(q[9])
                 qc.z(q[10])
 
+circ = QuantumCircuit(1)
+circ.rz(np.pi/8, 0)
+basis = ["t", "tdg", "z", "h"]
+approx = generate_basic_approximations(basis, depth=3)
+skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
+rootT = skd(circ)
+
+def root_T_L(qc: QuantumCircuit, q: list, pos: int, m: list, tracker, z_stab = False):
+    instruction = rootT.data
+    for i in instruction:
+        if i.name == "t":
+            T_L(qc, q, pos=pos, m=m, tracker=tracker, z_stab=z_stab)
+        if i.name == "tdg":
+            adj_T_L(qc, q, pos=pos, m=m, tracker=tracker, z_stab=z_stab)
+        if i.name == "h":
+            H_L(qc, q, pos=pos, m=m, tracker=tracker, z_stab=z_stab)
+
+circ = QuantumCircuit(1)
+circ.rz(-np.pi/8, 0)
+basis = ["t", "tdg", "z", "h"]
+approx = generate_basic_approximations(basis, depth=3)
+skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
+rootadjT = skd(circ)
+
+def adj_root_T_L(qc: QuantumCircuit, q: list, pos: int, m:list, tracker, z_stab=False):
+    instruction = rootadjT.data
+    for i in instruction:
+        if i.name == "t":
+            T_L(qc, q, pos=pos, m=m, tracker=tracker, z_stab=z_stab)
+        if i.name == "tdg":
+            adj_T_L(qc, q, pos=pos, m=m, tracker=tracker, z_stab=z_stab)
+        if i.name == "h":
+            H_L(qc, q, pos=pos, m=m, tracker=tracker, z_stab=z_stab)
+
+def CT_L(qc: QuantumCircuit, q: list, n: list, tracker, err = False):
+    root_T_L(qc, q, 0, n, tracker, z_stab = err)
+    root_T_L(qc, q, 1, n, tracker, z_stab = err)
+    CNOT_L(qc, q, 0)
+    adj_root_T_L(qc, q, 1, n, tracker, z_stab = err)
+    CNOT_L(qc, q, 0)
+    
 def CS_L(qc: QuantumCircuit, q: list):
     T_L(qc, q, 0)
     T_L(qc, q, 1)
@@ -398,15 +360,226 @@ def CS_L(qc: QuantumCircuit, q: list):
     adj_T_L(qc, q, 1)
     CNOT_L(qc, q, 0)
 
-def code_test(n: int):                                     #intialize |00> state
+def qec(qc: QuantumCircuit, q: list):
+    anc = qc.num_qubits - 1
+    qc.reset(anc)
+    #####################Bitflip Error Stabilizer messen########################################
+    for k in range(1):
+
+        #S2 Stabilizers
+        for i in range(4):
+            qc.cx(q[i], anc)
+        qc.measure(anc, 19)
+        qc.reset(anc)
+
+        #S4 Stabilizer
+        for i in range(4):
+            qc.cx(q[i+4], anc)
+        qc.measure(anc, 20)
+        qc.reset(anc)
+
+        #S6 Stabilizer
+        for i in range(4):
+            qc.cx(q[i+8], anc)
+        qc.measure(anc, 21)
+        qc.reset(anc)
+
+        #S9 Stabilizer
+        qc.cx(q[0],anc)
+        qc.cx(q[2],anc)
+        qc.cx(q[6],anc)
+        qc.cx(q[7],anc)
+        qc.cx(q[8],anc)
+        qc.cx(q[11],anc)
+        qc.measure(anc, 22)
+        qc.reset(anc)
+
+        #S10 Stabilizer
+        qc.cx(q[0],anc)
+        qc.cx(q[3],anc)
+        qc.cx(q[4],anc)
+        qc.cx(q[6],anc)
+        qc.cx(q[10],anc)
+        qc.cx(q[11],anc)
+        qc.measure(anc, 23)
+        qc.reset(anc)
+
+        with qc.if_test((19,1)):            #X0
+            with qc.if_test((22,1)):
+                with qc.if_test((23,1)):
+                    qc.x(q[0])
+
+        with qc.if_test((19,1)):            #X1
+            with qc.if_test((22,0)):
+                with qc.if_test((23,0)):
+                    qc.x(q[1])
+
+        with qc.if_test((19,1)):            #X2
+            with qc.if_test((22,1)):
+                with qc.if_test((23,0)):
+                    qc.x(q[2])
+
+        with qc.if_test((19,1)):            #X3
+            with qc.if_test((22,0)):
+                with qc.if_test((23,1)):
+                    qc.x(q[3])
+
+        with qc.if_test((20,1)):            #X4
+            with qc.if_test((22,0)):
+                with qc.if_test((23,1)):
+                    qc.x(q[4])
+
+        with qc.if_test((20,1)):            #X5
+            with qc.if_test((22,0)):
+                with qc.if_test((23,0)):
+                    qc.x(q[5])
+
+        with qc.if_test((20,1)):            #X6
+            with qc.if_test((22,1)):
+                with qc.if_test((23,1)):
+                    qc.x(q[6])
+
+        with qc.if_test((20,1)):            #X7
+            with qc.if_test((22,1)):
+                with qc.if_test((23,0)):
+                    qc.x(q[7])
+
+        with qc.if_test((21,1)):            #X8
+            with qc.if_test((22,1)):
+                with qc.if_test((23,0)):
+                    qc.x(q[8])
+        
+        with qc.if_test((21,1)):            #X9
+            with qc.if_test((22,0)):
+                with qc.if_test((23,0)):
+                    qc.x(q[9])
+        
+        with qc.if_test((21,1)):            #X10
+            with qc.if_test((22,0)):
+                with qc.if_test((23,1)):
+                    qc.x(q[10])
+
+        with qc.if_test((21,1)):            #X11
+            with qc.if_test((22,1)):
+                with qc.if_test((23,1)):
+                    qc.x(q[11])
+
+    ###################Phaseflip Error Stabilizers############################
+    for k in range(1):
+        #S1 Stabilizers
+        qc.h(anc)
+        for i in range(4):
+            qc.cx(anc, q[i])
+        qc.h(anc)
+        qc.measure(anc, 24)
+        qc.reset(anc)
+
+        #S3 Stabilizer
+        qc.h(anc)
+        for i in range(4):
+            qc.cx(anc, q[i+4])
+        qc.h(anc)
+        qc.measure(anc, 25)
+        qc.reset(anc)
+
+        #S5 Stabilizer
+        qc.h(anc)
+        for i in range(4):
+            qc.cx(anc, q[i+8])
+        qc.h(anc)
+        qc.measure(anc, 26)
+        qc.reset(anc)
+
+        #S7 Stabilizer
+        qc.h(anc)
+        qc.cx(anc, q[0])
+        qc.cx(anc, q[1])
+        qc.cx(anc, q[5])
+        qc.cx(anc, q[7])
+        qc.cx(anc, q[8])
+        qc.cx(anc, q[11])
+        qc.h(anc)
+        qc.measure(anc, 27)
+        qc.reset(anc)
+
+        #S8 Stabilizer
+        qc.h(anc)
+        qc.cx(anc, q[0])
+        qc.cx(anc, q[3])
+        qc.cx(anc, q[4])
+        qc.cx(anc, q[5])
+        qc.cx(anc, q[9])
+        qc.cx(anc, q[11])
+        qc.h(anc)
+        qc.measure(anc, 28)
+        qc.reset(anc)
+
+        with qc.if_test((24,1)):            #Z0
+            with qc.if_test((27,1)):
+                with qc.if_test((28,1)):
+                    qc.z(q[0])
+
+        with qc.if_test((24,1)):            #Z1
+            with qc.if_test((27,1)):
+                with qc.if_test((28,0)):
+                    qc.z(q[1])
+
+        with qc.if_test((24,1)):            #Z2
+            with qc.if_test((27,0)):
+                with qc.if_test((28,0)):
+                    qc.z(q[2])
+
+        with qc.if_test((24,1)):            #Z3
+            with qc.if_test((27,0)):
+                with qc.if_test((28,1)):
+                    qc.z(q[3])
+
+        with qc.if_test((25,1)):            #Z4
+            with qc.if_test((27,0)):
+                with qc.if_test((28,1)):
+                    qc.z(q[4])
+
+        with qc.if_test((25,1)):            #Z5
+            with qc.if_test((27,1)):
+                with qc.if_test((28,1)):
+                    qc.z(q[5])
+
+        with qc.if_test((25,1)):            #Z6
+            with qc.if_test((27,0)):
+                with qc.if_test((28,0)):
+                    qc.z(q[6])
+
+        with qc.if_test((25,1)):            #Z7
+            with qc.if_test((27,1)):
+                with qc.if_test((28,0)):
+                    qc.z(q[7])
+
+        with qc.if_test((26,1)):            #Z8
+            with qc.if_test((27,1)):
+                with qc.if_test((28,0)):
+                    qc.z(q[8])
+        
+        with qc.if_test((26,1)):            #Z9
+            with qc.if_test((27,0)):
+                with qc.if_test((28,1)):
+                    qc.z(q[9])
+        
+        with qc.if_test((26,1)):            #Z10
+            with qc.if_test((27,0)):
+                with qc.if_test((28,0)):
+                    qc.z(q[10])
+
+        with qc.if_test((26,1)):            #Z11
+            with qc.if_test((27,1)):
+                with qc.if_test((28,1)):
+                    qc.z(q[11])
+
+def code_test(n: int):                                     #initialize |00> state   ,   n = 2*#qec + #z_qec
     qr = QuantumRegister(15,"q")
-    cbits = ClassicalRegister(19+n*10,"c")             #12(Auslesen am Ende) + 7(Preselection) + 5(Stabilizers) = 24 insgesamt
+    cbits = ClassicalRegister(19+n*5,"c")             #12(Auslesen am Ende) + 7(Preselection) + 5n(Stabilizers) = 19 + 5*n insgesamt
     qc = QuantumCircuit(qr, cbits)
 
     q = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
-
-    for i in range(12):
-        qc.id(i)
 
     qc.h(0)
     qc.h(1)
@@ -437,11 +610,8 @@ def code_test(n: int):                                     #intialize |00> state
     qc.cx(11,14)
 
     qc.h(12)
-    qc.id(12)
     qc.measure(12,0)
-    qc.id(13)
     qc.measure(13,1)
-    qc.id(14)
     qc.measure(14,2)
 
     qc.reset(12)
@@ -463,9 +633,7 @@ def code_test(n: int):                                     #intialize |00> state
     qc.cx(5,13)
 
     qc.h(12)
-    qc.id(12)
     qc.measure(12,3)
-    qc.id(13)
     qc.measure(13,4)
 
     qc.reset(12)
@@ -483,9 +651,7 @@ def code_test(n: int):                                     #intialize |00> state
 
     qc.h(12)
 
-    qc.id(12)
     qc.measure(12,5)
-    qc.id(13)
     qc.measure(13,6)
 
     qc.reset(12)
@@ -496,10 +662,12 @@ def code_test(n: int):                                     #intialize |00> state
 
     q[9],q[10] = q[10],q[9]
     q[10],q[11] = q[11],q[10]
-    
-    return qc, q
 
-def sortout(c_register: list):
+    track = [""]
+    
+    return qc, q, track
+
+def sortout(c_register: list, tracker):
     cbits = len(c_register[0])
     z_ref = ["00000","11100","00100","10100","01100","01010","00010","11010","10010","10001","00001","01001","11001"]
     x_ref = ["00000","11100","10100","00100","01100","01010","11010","00010","10010","10001","01001","00001","11001"]
@@ -510,42 +678,63 @@ def sortout(c_register: list):
             ref.append(i+j)
 
     check = [i[12:cbits-7] for i in c_register]
-
+    
+    done = 0
     brain = []
-    bruh = int((cbits-19)/10)
-    for i in range(bruh):
-        hmm = [j[int(10*i): int(10*(i+1))] for j in check]
-        for j in range(len(hmm)):
-            for k in ref:
-                if hmm[j] == k:
-                    hmm[j] = 1
-        for j in range(len(hmm)):
-            if hmm[j] != 1:
-                brain.append(j)
+    for i in tracker[0]:
+        if i == "z":
+            if done == 0:
+                hmm = [j[-5:] for j in check]
+            else:
+                hmm = [j[-done-5:-done] for j in check]
+            done += 5
+            for j in range(len(hmm)):
+                for k in z_ref:
+                    if hmm[j] == k:
+                        hmm[j] = 1
+            for j in range(len(hmm)):
+                if hmm[j] != 1:
+                    brain.append(j)
+        if i == "q":
+            if done == 0:
+                hmm = [j[-10:] for j in check]                                      #HIER STIMMT WAS NET, FIXEN!!!
+            else:
+                hmm = [j[-done-10:-done] for j in check]                            
+            done += 10
+            for j in range(len(hmm)):
+                for k in ref:
+                    if hmm[j] == k:
+                        hmm[j] = 1
+            for j in range(len(hmm)):
+                if hmm[j] != 1:
+                    brain.append(j)
     return brain
 
-def qec_ideal(qc: QuantumCircuit, q:list, n: int):
+def qec_ideal(qc: QuantumCircuit, q:list, m: list, tracker):              #n --> +2
     anc = qc.num_qubits - 1
     qc.reset(anc)
+    tracker[0] += "q"
+    n = m[0]
+    m[0] += 2
     #####################Bitflip Error Stabilizer messen########################################
     for k in range(1):
 
         #S2 Stabilizers
         for i in range(4):
             qc.append(cx_ideal, [anc, q[i]])
-        qc.measure(anc, 7+n*10)
+        qc.measure(anc, 7+n*5)
         qc.reset(anc)
 
         #S4 Stabilizer
         for i in range(4):
             qc.append(cx_ideal, [anc, q[i+4]])
-        qc.measure(anc, 8+n*10)
+        qc.measure(anc, 8+n*5)
         qc.reset(anc)
 
         #S6 Stabilizer
         for i in range(4):
             qc.append(cx_ideal, [anc, q[i+8]])
-        qc.measure(anc, 9+n*10)
+        qc.measure(anc, 9+n*5)
         qc.reset(anc)
 
         #S9 Stabilizer
@@ -555,7 +744,7 @@ def qec_ideal(qc: QuantumCircuit, q:list, n: int):
         qc.append(cx_ideal, [anc, q[7]])
         qc.append(cx_ideal, [anc, q[8]])
         qc.append(cx_ideal, [anc, q[11]])
-        qc.measure(anc, 10+n*10)
+        qc.measure(anc, 10+n*5)
         qc.reset(anc)
 
         #S10 Stabilizer
@@ -565,67 +754,67 @@ def qec_ideal(qc: QuantumCircuit, q:list, n: int):
         qc.append(cx_ideal, [anc, q[6]])
         qc.append(cx_ideal, [anc, q[10]])
         qc.append(cx_ideal, [anc, q[11]])
-        qc.measure(anc, 11+n*10)
+        qc.measure(anc, 11+n*5)
         qc.reset(anc)
 
-        with qc.if_test((7+n*10,1)):            #X0
-            with qc.if_test((10+n*10,1)):
-                with qc.if_test((11+n*10,1)):
+        with qc.if_test((7+n*5,1)):            #X0
+            with qc.if_test((10+n*5,1)):
+                with qc.if_test((11+n*5,1)):
                     qc.append(x_ideal, [q[0]])
 
-        with qc.if_test((7+n*10,1)):            #X1
-            with qc.if_test((10+n*10,0)):
-                with qc.if_test((11+n*10,0)):
+        with qc.if_test((7+n*5,1)):            #X1
+            with qc.if_test((10+n*5,0)):
+                with qc.if_test((11+n*5,0)):
                     qc.append(x_ideal, [q[1]])
 
-        with qc.if_test((7+n*10,1)):            #X2
-            with qc.if_test((10+n*10,1)):
-                with qc.if_test((11+n*10,0)):
+        with qc.if_test((7+n*5,1)):            #X2
+            with qc.if_test((10+n*5,1)):
+                with qc.if_test((11+n*5,0)):
                     qc.append(x_ideal, [q[2]])
 
-        with qc.if_test((7+n*10,1)):            #X3
-            with qc.if_test((10+n*10,0)):
-                with qc.if_test((11+n*10,1)):
+        with qc.if_test((7+n*5,1)):            #X3
+            with qc.if_test((10+n*5,0)):
+                with qc.if_test((11+n*5,1)):
                     qc.append(x_ideal, [q[3]])
 
-        with qc.if_test((8+n*10,1)):            #X4
-            with qc.if_test((10+n*10,0)):
-                with qc.if_test((11+n*10,1)):
+        with qc.if_test((8+n*5,1)):            #X4
+            with qc.if_test((10+n*5,0)):
+                with qc.if_test((11+n*5,1)):
                     qc.append(x_ideal, [q[4]])
 
-        with qc.if_test((8+n*10,1)):            #X5
-            with qc.if_test((10+n*10,0)):
-                with qc.if_test((11+n*10,0)):
+        with qc.if_test((8+n*5,1)):            #X5
+            with qc.if_test((10+n*5,0)):
+                with qc.if_test((11+n*5,0)):
                     qc.append(x_ideal, [q[5]])
 
-        with qc.if_test((8+n*10,1)):            #X6
-            with qc.if_test((10+n*10,1)):
-                with qc.if_test((11+n*10,1)):
+        with qc.if_test((8+n*5,1)):            #X6
+            with qc.if_test((10+n*5,1)):
+                with qc.if_test((11+n*5,1)):
                     qc.append(x_ideal, [q[6]])
 
-        with qc.if_test((8+n*10,1)):            #X7
-            with qc.if_test((10+n*10,1)):
-                with qc.if_test((11+n*10,0)):
+        with qc.if_test((8+n*5,1)):            #X7
+            with qc.if_test((10+n*5,1)):
+                with qc.if_test((11+n*5,0)):
                     qc.append(x_ideal, [q[7]])
 
-        with qc.if_test((9+n*10,1)):            #X8
-            with qc.if_test((10+n*10,1)):
-                with qc.if_test((11+n*10,0)):
+        with qc.if_test((9+n*5,1)):            #X8
+            with qc.if_test((10+n*5,1)):
+                with qc.if_test((11+n*5,0)):
                     qc.append(x_ideal, [q[8]])
         
-        with qc.if_test((9+n*10,1)):            #X9
-            with qc.if_test((10+n*10,0)):
-                with qc.if_test((11+n*10,0)):
+        with qc.if_test((9+n*5,1)):            #X9
+            with qc.if_test((10+n*5,0)):
+                with qc.if_test((11+n*5,0)):
                     qc.append(x_ideal, [q[9]])
         
-        with qc.if_test((9+n*10,1)):            #X10
-            with qc.if_test((10+n*10,0)):
-                with qc.if_test((11+n*10,1)):
+        with qc.if_test((9+n*5,1)):            #X10
+            with qc.if_test((10+n*5,0)):
+                with qc.if_test((11+n*5,1)):
                     qc.append(x_ideal, [q[10]])
 
-        with qc.if_test((9+n*10,1)):            #X11
-            with qc.if_test((10+n*10,1)):
-                with qc.if_test((11+n*10,1)):
+        with qc.if_test((9+n*5,1)):            #X11
+            with qc.if_test((10+n*5,1)):
+                with qc.if_test((11+n*5,1)):
                     qc.append(x_ideal, [q[11]])
 
     ###################Phaseflip Error Stabilizers############################
@@ -635,7 +824,7 @@ def qec_ideal(qc: QuantumCircuit, q:list, n: int):
         for i in range(4):
             qc.append(cx_ideal, [q[i], anc])
         qc.append(h_ideal, [anc])
-        qc.measure(anc, 12+n*10)
+        qc.measure(anc, 12+n*5)
         qc.reset(anc)
 
         #S3 Stabilizer
@@ -643,7 +832,7 @@ def qec_ideal(qc: QuantumCircuit, q:list, n: int):
         for i in range(4):
             qc.append(cx_ideal, [q[i+4], anc])
         qc.append(h_ideal, [anc])
-        qc.measure(anc, 13+n*10)
+        qc.measure(anc, 13+n*5)
         qc.reset(anc)
 
         #S5 Stabilizer
@@ -651,7 +840,7 @@ def qec_ideal(qc: QuantumCircuit, q:list, n: int):
         for i in range(4):
             qc.append(cx_ideal, [q[i+8], anc])
         qc.append(h_ideal, [anc])
-        qc.measure(anc, 14+n*10)
+        qc.measure(anc, 14+n*5)
         qc.reset(anc)
 
         #S7 Stabilizer
@@ -663,7 +852,7 @@ def qec_ideal(qc: QuantumCircuit, q:list, n: int):
         qc.append(cx_ideal, [q[8], anc])
         qc.append(cx_ideal, [q[11], anc])
         qc.append(h_ideal, [anc])
-        qc.measure(anc, 15+n*10)
+        qc.measure(anc, 15+n*5)
         qc.reset(anc)
 
         #S8 Stabilizer
@@ -675,68 +864,175 @@ def qec_ideal(qc: QuantumCircuit, q:list, n: int):
         qc.append(cx_ideal, [q[9], anc])
         qc.append(cx_ideal, [q[11], anc])
         qc.append(h_ideal, [anc])
-        qc.measure(anc, 16+n*10)
+        qc.measure(anc, 16+n*5)
         qc.reset(anc)
 
-        with qc.if_test((12+n*10,1)):            #Z0
-            with qc.if_test((15+n*10,1)):
-                with qc.if_test((16+n*10,1)):
+        with qc.if_test((12+n*5,1)):            #Z0
+            with qc.if_test((15+n*5,1)):
+                with qc.if_test((16+n*5,1)):
                     qc.append(z_ideal,[q[0]])
 
-        with qc.if_test((12+n*10,1)):            #Z1
-            with qc.if_test((15+n*10,1)):
-                with qc.if_test((16+n*10,0)):
+        with qc.if_test((12+n*5,1)):            #Z1
+            with qc.if_test((15+n*5,1)):
+                with qc.if_test((16+n*5,0)):
                     qc.append(z_ideal,[q[1]])
 
-        with qc.if_test((12+n*10,1)):            #Z2
-            with qc.if_test((15+n*10,0)):
-                with qc.if_test((16+n*10,0)):
+        with qc.if_test((12+n*5,1)):            #Z2
+            with qc.if_test((15+n*5,0)):
+                with qc.if_test((16+n*5,0)):
                     qc.append(z_ideal,[q[2]])
 
-        with qc.if_test((12+n*10,1)):            #Z3
-            with qc.if_test((15+n*10,0)):
-                with qc.if_test((16+n*10,1)):
+        with qc.if_test((12+n*5,1)):            #Z3
+            with qc.if_test((15+n*5,0)):
+                with qc.if_test((16+n*5,1)):
                     qc.append(z_ideal,[q[3]])
 
-        with qc.if_test((13+n*10,1)):            #Z4
-            with qc.if_test((15+n*10,0)):
-                with qc.if_test((16+n*10,1)):
+        with qc.if_test((13+n*5,1)):            #Z4
+            with qc.if_test((15+n*5,0)):
+                with qc.if_test((16+n*5,1)):
                     qc.append(z_ideal,[q[4]])
 
-        with qc.if_test((13+n*10,1)):            #Z5
-            with qc.if_test((15+n*10,1)):
-                with qc.if_test((16+n*10,1)):
+        with qc.if_test((13+n*5,1)):            #Z5
+            with qc.if_test((15+n*5,1)):
+                with qc.if_test((16+n*5,1)):
                     qc.append(z_ideal,[q[5]])
 
-        with qc.if_test((13+n*10,1)):            #Z6
-            with qc.if_test((15+n*10,0)):
-                with qc.if_test((16+n*10,0)):
+        with qc.if_test((13+n*5,1)):            #Z6
+            with qc.if_test((15+n*5,0)):
+                with qc.if_test((16+n*5,0)):
                     qc.append(z_ideal,[q[6]])
 
-        with qc.if_test((13+n*10,1)):            #Z7
-            with qc.if_test((15+n*10,1)):
-                with qc.if_test((16+n*10,0)):
+        with qc.if_test((13+n*5,1)):            #Z7
+            with qc.if_test((15+n*5,1)):
+                with qc.if_test((16+n*5,0)):
                     qc.append(z_ideal,[q[7]])
 
-        with qc.if_test((14+n*10,1)):            #Z8
-            with qc.if_test((15+n*10,1)):
-                with qc.if_test((16+n*10,0)):
+        with qc.if_test((14+n*5,1)):            #Z8
+            with qc.if_test((15+n*5,1)):
+                with qc.if_test((16+n*5,0)):
                     qc.append(z_ideal,[q[8]])
         
-        with qc.if_test((14+n*10,1)):            #Z9
-            with qc.if_test((15+n*10,0)):
-                with qc.if_test((16+n*10,1)):
+        with qc.if_test((14+n*5,1)):            #Z9
+            with qc.if_test((15+n*5,0)):
+                with qc.if_test((16+n*5,1)):
                     qc.append(z_ideal,[q[9]])
         
-        with qc.if_test((14+n*10,1)):            #Z10
-            with qc.if_test((15+n*10,0)):
-                with qc.if_test((16+n*10,0)):
+        with qc.if_test((14+n*5,1)):            #Z10
+            with qc.if_test((15+n*5,0)):
+                with qc.if_test((16+n*5,0)):
                     qc.append(z_ideal,[q[10]])
 
-        with qc.if_test((14+n*10,1)):            #Z11
-            with qc.if_test((15+n*10,1)):
-                with qc.if_test((16+n*10,1)):
+        with qc.if_test((14+n*5,1)):            #Z11
+            with qc.if_test((15+n*5,1)):
+                with qc.if_test((16+n*5,1)):
                     qc.append(z_ideal,[q[11]])  
+
+def z_qec_ideal(qc: QuantumCircuit, q:list, m: list, tracker):            #n --> +1
+    anc = qc.num_qubits - 1
+    qc.reset(anc)
+    tracker[0] += "z"
+    n=m[0]
+    m[0] += 1
+    #####################Bitflip Error Stabilizer messen########################################
+    for k in range(1):
+
+        #S2 Stabilizers
+        for i in range(4):
+            qc.append(cx_ideal, [anc, q[i]])
+        qc.measure(anc, 7+n*5)
+        qc.reset(anc)
+
+        #S4 Stabilizer
+        for i in range(4):
+            qc.append(cx_ideal, [anc, q[i+4]])
+        qc.measure(anc, 8+n*5)
+        qc.reset(anc)
+
+        #S6 Stabilizer
+        for i in range(4):
+            qc.append(cx_ideal, [anc, q[i+8]])
+        qc.measure(anc, 9+n*5)
+        qc.reset(anc)
+
+        #S9 Stabilizer
+        qc.append(cx_ideal, [anc, q[0]])
+        qc.append(cx_ideal, [anc, q[2]])
+        qc.append(cx_ideal, [anc, q[6]])
+        qc.append(cx_ideal, [anc, q[7]])
+        qc.append(cx_ideal, [anc, q[8]])
+        qc.append(cx_ideal, [anc, q[11]])
+        qc.measure(anc, 10+n*5)
+        qc.reset(anc)
+
+        #S10 Stabilizer
+        qc.append(cx_ideal, [anc, q[0]])
+        qc.append(cx_ideal, [anc, q[3]])
+        qc.append(cx_ideal, [anc, q[4]])
+        qc.append(cx_ideal, [anc, q[6]])
+        qc.append(cx_ideal, [anc, q[10]])
+        qc.append(cx_ideal, [anc, q[11]])
+        qc.measure(anc, 11+n*5)
+        qc.reset(anc)
+
+        with qc.if_test((7+n*5,1)):            #X0
+            with qc.if_test((10+n*5,1)):
+                with qc.if_test((11+n*5,1)):
+                    qc.append(x_ideal, [q[0]])
+
+        with qc.if_test((7+n*5,1)):            #X1
+            with qc.if_test((10+n*5,0)):
+                with qc.if_test((11+n*5,0)):
+                    qc.append(x_ideal, [q[1]])
+
+        with qc.if_test((7+n*5,1)):            #X2
+            with qc.if_test((10+n*5,1)):
+                with qc.if_test((11+n*5,0)):
+                    qc.append(x_ideal, [q[2]])
+
+        with qc.if_test((7+n*5,1)):            #X3
+            with qc.if_test((10+n*5,0)):
+                with qc.if_test((11+n*5,1)):
+                    qc.append(x_ideal, [q[3]])
+
+        with qc.if_test((8+n*5,1)):            #X4
+            with qc.if_test((10+n*5,0)):
+                with qc.if_test((11+n*5,1)):
+                    qc.append(x_ideal, [q[4]])
+
+        with qc.if_test((8+n*5,1)):            #X5
+            with qc.if_test((10+n*5,0)):
+                with qc.if_test((11+n*5,0)):
+                    qc.append(x_ideal, [q[5]])
+
+        with qc.if_test((8+n*5,1)):            #X6
+            with qc.if_test((10+n*5,1)):
+                with qc.if_test((11+n*5,1)):
+                    qc.append(x_ideal, [q[6]])
+
+        with qc.if_test((8+n*5,1)):            #X7
+            with qc.if_test((10+n*5,1)):
+                with qc.if_test((11+n*5,0)):
+                    qc.append(x_ideal, [q[7]])
+
+        with qc.if_test((9+n*5,1)):            #X8
+            with qc.if_test((10+n*5,1)):
+                with qc.if_test((11+n*5,0)):
+                    qc.append(x_ideal, [q[8]])
+        
+        with qc.if_test((9+n*5,1)):            #X9
+            with qc.if_test((10+n*5,0)):
+                with qc.if_test((11+n*5,0)):
+                    qc.append(x_ideal, [q[9]])
+        
+        with qc.if_test((9+n*5,1)):            #X10
+            with qc.if_test((10+n*5,0)):
+                with qc.if_test((11+n*5,1)):
+                    qc.append(x_ideal, [q[10]])
+
+        with qc.if_test((9+n*5,1)):            #X11
+            with qc.if_test((10+n*5,1)):
+                with qc.if_test((11+n*5,1)):
+                    qc.append(x_ideal, [q[11]])
 
 def readout_2(qc: QuantumCircuit, shots: int, q: list, noise = 0):
     cbits = qc.num_clbits
@@ -757,9 +1053,10 @@ def readout_2(qc: QuantumCircuit, shots: int, q: list, noise = 0):
     job = sim.run(qc, shots=shots, noise_model = noise_model)
     result = job.result()
     counts = result.get_counts()
+
     return counts, cbits
 
-def fullpp(counts: dict, shots: int, cbits: int, two = True):
+def fullpp(counts: dict, shots: int, cbits: int, track, two = True):
     nn, ne, en, ee = ["0000","1111"], ["0011","1100"], ["0101","1010"], ["0110","1001"]
     zerozero, zeroone, onezero, oneone = [], [], [], []
 
@@ -816,7 +1113,7 @@ def fullpp(counts: dict, shots: int, cbits: int, two = True):
             bits[i] = "post"
 
     if two:
-        twoqubiterrors = sortout(bitstring)
+        twoqubiterrors = sortout(bitstring, tracker=track)
         for i in twoqubiterrors:
             if bits[i] != "post" and bits[i] != "pre":
                 bits[i] = "twoqubiterr"
@@ -852,41 +1149,52 @@ def fullpp(counts: dict, shots: int, cbits: int, two = True):
     twoqubiterr = (twoqubiterr/shots)
 
     return [preselected, twoqubiterr, post, nullnull, nulleins, einsnull, einseins]
+
+
 ################################################################################################################################################################
 def gen_data(name):
-    x = np.linspace(0,0.1,20)
-    two, no_two = [],[]
-    shots = 1000
+    x = np.linspace(0,0.02,20)
+    shots = 100
+    pre, post, nn, ne, en, ee, pre2, two, post2, nn2, ne2, ee2, en2 = [],[],[],[],[],[],[],[],[],[],[],[],[]
     for i in x:
-        qc, q = code_test(4)
+        qc, q, tracker = code_test(0)
 
+        n = [0]
         X_L(qc, q, 1)
-        qec_ideal(qc, q, 0)
-        H_L(qc, q, 0)
-        qec_ideal(qc, q, 1)
-        CS_L(qc, q) 
-        qec_ideal(qc, q, 2)
-        adj_S_L(qc, q, 0)
-        qec_ideal(qc, q, 3)
-        H_L(qc, q, 0)
+        H_L(qc, q, 0, n, tracker=tracker, z_stab=False)
+        CT_L(qc, q, n, tracker, err=False)
+        adj_T_L(qc, q, 0, n, tracker,z_stab=False)
+        H_L(qc, q, 0,n, tracker=tracker, z_stab=False)
 
         counts, cbits = readout_2(qc, shots, q, i)
 
-        result = fullpp(counts, shots, cbits)
-        result_1 = fullpp(counts, shots, cbits, False)
+        result = fullpp(counts, shots, cbits, tracker, False)
 
-        if (result[5]+result[3]+result[6]+result[4]) == 0:
-            success_two = 0.5
-        else:
-            success_two = (result[3]+ result[4])/(result[5]+result[3]+result[6]+result[4])
+        nice, total = result[3] + result[4], result[3] + result[6] + result[4] + result[5]
 
-        if (result_1[5]+result_1[3]+result_1[6]+result_1[4]) == 0:
-            success = 0.5
-        else:
-            success = (result_1[3]+ result_1[4])/(result_1[5]+result_1[3]+result_1[6]+result_1[4])
+        pre.append(result[0]), post.append(result[2]), nn.append(result[3]), ne.append(result[4]), en.append(result[5]), ee.append(result[6])
 
-        two.append(success_two), no_two.append(success)
-        ###################################################################################################
-        
-    data = np.array((x, two, no_two))
-    np.savetxt("C3_{}.txt".format(name), data, delimiter=",")
+        ###############################################################################################################
+
+        qc, q, tracker = code_test(101)
+
+        n = [0]
+        qec_ideal(qc, q, n, tracker)
+        X_L(qc, q, 1)
+        qec_ideal(qc, q, n, tracker)
+        H_L(qc, q, 0, n, tracker=tracker, z_stab=True)
+        qec_ideal(qc, q, n, tracker)
+        CT_L(qc, q, n, tracker, err=True)
+        qec_ideal(qc, q, n, tracker)
+        adj_T_L(qc, q, 0, n, tracker,z_stab=True)
+        qec_ideal(qc, q, n, tracker)
+        H_L(qc, q, 0,n, tracker=tracker, z_stab=True)
+
+        counts, cbits = readout_2(qc, shots, q, i)
+
+        result_1 = fullpp(counts, shots, cbits, tracker)
+
+        pre2.append(result_1[0]), two.append(result_1[1]), post2.append(result_1[2]), nn2.append(result_1[3]), ne2.append(result_1[4]), en2.append(result_1[5]), ee2.append(result_1[6])
+
+    data = np.array((x,pre,post,nn,ne,en,ee,pre2,two,post2,nn2,ne2,en2,ee2))
+    np.savetxt("Carbon_3rd_4{}.txt".format(name), data, delimiter=",")
