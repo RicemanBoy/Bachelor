@@ -841,4 +841,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("Plots/text/FTSteane_3rd_a.txt", data, delimiter=",")
+    np.savetxt("FTSteane_3rd_a{}.txt".format(name), data, delimiter=",")
