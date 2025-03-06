@@ -1,5 +1,6 @@
 import qutip as qt
 import numpy as np
+from qutip import gates
 from utils import det
 
 # 1 qubit gates
@@ -7,27 +8,31 @@ I = qt.qeye(2)
 X = qt.sigmax()
 Y = qt.sigmay()
 Z = qt.sigmaz()
-H = qt.hadamard_transform()
-S = qt.phasegate(np.pi / 2)
-T = qt.phasegate(np.pi / 4)
-SQNOT = qt.sqrtnot()
+H = gates.hadamard_transform()
+S = gates.phasegate(np.pi / 2)
+T = gates.phasegate(np.pi / 4)
+adjT = gates.phasegate(-np.pi / 4)
+SQNOT = gates.sqrtnot()
 
 #SQNOT = [[0.5 + 0.5j, 0.5 - 0.5j], [0.5 - 0.5j, 0.5 + 0.5j]]
 
 def Rx(angle):
-    return qt.rx(angle)
+    # return [[np.cos(angle/2), -1j*np.sin(angle/2)], [-1j*np.sin(angle/2), np.cos(angle/2)]]
+    return gates.rx(angle)
 
 def Ry(angle):
-    return qt.ry(angle)
+    # return [[np.cos(angle/2), -np.sin(angle/2)], [np.sin(angle/2), np.cos(angle/2)]]
+    return gates.ry(angle)
 
 def Rz(angle):
-    return qt.rz(angle)
+    # return [[np.exp(-1j*(angle/2)), 0], [0, np.exp(1j*(angle/2))]]
+    return gates.rz(angle)
 
 #H = np.matmul(X,Ry(np.pi/2))
 
-#S = Rz(np.pi/2)
+# S = Rz(np.pi/2)
 
-#T = Rz(np.pi/4)
+# T = Rz(np.pi/4)
 
 def R(axis, angle):
     angle = np.remainder(angle, 2 * np.pi)
@@ -40,20 +45,20 @@ def Phase(angle):
     return qt.phasegate(angle)
 
 # 2 qubit gates
-CNOT = qt.cnot()
-CZ = qt.csign()
-Berkeley = qt.berkeley()
-SWAP = qt.swap()
-iSWAP = qt.iswap()
-SQSWAP = qt.sqrtswap()
-SQiSWAP = qt.sqrtiswap()
+CNOT = gates.cnot()
+CZ = gates.csign()
+Berkeley = gates.berkeley()
+SWAP = gates.swap()
+iSWAP = gates.iswap()
+SQSWAP = gates.sqrtswap()
+SQiSWAP = gates.sqrtiswap()
 
 def aSWAP(angle):
-    return qt.swapalpha(angle)
+    return gates.swapalpha(angle)
 
 # 3 qubit gates
-Fredkin = qt.fredkin()
-Toffoli = qt.toffoli()
+Fredkin = gates.fredkin()
+Toffoli = gates.toffoli()
 
 
 
