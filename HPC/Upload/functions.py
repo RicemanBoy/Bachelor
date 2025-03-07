@@ -909,10 +909,6 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     result = job.result()
     counts = result.get_counts()
 
-    print(counts)
-
-    #print(counts)
-
     bitstring = list(counts.keys())
 
     hmm = list(counts.values())
@@ -921,9 +917,6 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     pre, preselected = [i[allcbits-2:] for i in bitstring], 0
     bits = [i[:7] for i in bitstring]
     postprocess = [i[7:allcbits-10] for i in bitstring]
-
-    #print(bits)
-    #print(postprocess)
 
     for i in range(len(pre)):
         if pre[i].count("1") != 0:
@@ -951,11 +944,9 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
             if bits[i] != "pre" and bits[i] != "post":
                 bits[i] = "post"
 
-    #print(bits)
     ones = 0
     zeros = 0
     post = 0
-    #magic = 0
 
     for i in range(len(bits)):
         if bits[i] == 0:
