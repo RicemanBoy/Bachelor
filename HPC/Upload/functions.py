@@ -10,8 +10,9 @@ from qiskit.circuit.library import UnitaryGate
 
 ################################################################################################################################################################
 
+#https://www.nature.com/articles/srep19578 , https://arxiv.org/pdf/1106.2190 Figure 5b)
 def code_goto(cbits, n=3):             #encodes |00>_L
-    qr = QuantumRegister(7*n+2,"q")
+    qr = QuantumRegister(7*n+3,"q")
     qc = QuantumCircuit(qr, cbits)
     
     anc = qc.num_qubits - 1
@@ -20,31 +21,6 @@ def code_goto(cbits, n=3):             #encodes |00>_L
         qc.id(i)
 
     for i in range(n-1):
-        # qc.h(0+7*i)                           #funktioniert auch, aber der goto code geht auch, bin bloß dumm
-        # qc.h(1+7*i)
-        # qc.h(3+7*i)
-
-        # qc.cx(0+7*i,2+7*i)
-        # qc.cx(3+7*i,4+7*i)
-
-        # qc.cx(1+7*i,5+7*i)
-
-        # qc.cx(0+7*i,6+7*i)
-
-        # qc.cx(1+7*i,2+7*i)
-        # qc.cx(3+7*i,5+7*i)
-
-        # qc.cx(0+7*i,4+7*i)
-
-        # qc.cx(5+7*i,6+7*i)
-
-        # qc.cx(2+7*i,anc)
-        # qc.cx(4+7*i,anc)
-        # qc.cx(5+7*i,anc)
-
-        #qc.h(7)                            #directly implements a t gate onto the steane code
-        #qc.t(7)
-
         qc.h(1+7*i)
         qc.h(2+7*i)
         qc.h(3+7*i)
@@ -244,8 +220,11 @@ def Ty_L(qc: QuantumCircuit, cbits, pos: int):
 def Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
     state_inj = ClassicalRegister(8)
     qc.add_register(state_inj)
+    flags = ClassicalRegister(6)
+    qc.add_register(flags)
 
     anc = qc.num_qubits - 1
+    ancc = anc - 1
 
     for i in range(7):
         qc.reset(i+7*2)
@@ -291,66 +270,87 @@ def Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
     qc.measure(anc-1, state_inj[0])
     qc.measure(anc, state_inj[1])
     ##########################################QEC Block#######################################
-    qc.reset(anc)
+    qc.reset(anc), qc.reset(ancc)
     ##################################Z-Stabilizers##########################################
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
     qc.cx(0+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(2+7*2, anc)
     qc.cx(4+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(6+7*2, anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[4])
-    qc.reset(anc)
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, state_inj[4]), qc.measure(ancc, flags[0])
+    qc.reset(anc), qc.reset(ancc)
 
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
     qc.cx(1+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(2+7*2, anc)
     qc.cx(5+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(6+7*2, anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[3])
-    qc.reset(anc)
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, state_inj[3]), qc.measure(ancc, flags[1])
+    qc.reset(anc), qc.reset(ancc)
 
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
     qc.cx(3+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(4+7*2, anc)
     qc.cx(5+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(6+7*2, anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[2])
-    qc.reset(anc)
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, state_inj[2]), qc.measure(ancc, flags[2])
+    qc.reset(anc), qc.reset(ancc)
     ##################################X-Stabilizers##############################################
+    qc.id(anc), qc.id(ancc)
     qc.h(anc)
     qc.cx(anc, 0+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 2+7*2)
     qc.cx(anc, 4+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 6+7*2)
     qc.h(anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[7])
-    qc.reset(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[7]), qc.measure(ancc, flags[3])
+    qc.reset(anc), qc.reset(ancc)
 
+    qc.id(anc), qc.id(ancc)
     qc.h(anc)
     qc.cx(anc, 1+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 2+7*2)
     qc.cx(anc, 5+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 6+7*2)
     qc.h(anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[6])
-    qc.reset(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[6]), qc.measure(ancc, flags[4])
+    qc.reset(anc), qc.reset(ancc)
 
+    qc.id(anc), qc.id(ancc)
     qc.h(anc)
     qc.cx(anc, 3+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 4+7*2)
     qc.cx(anc, 5+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 6+7*2)
     qc.h(anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[5])
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[5]), qc.measure(ancc, flags[5])
     ###############################QEC-Block####################################################
     
     with qc.if_test((state_inj[2],0)):             #qbit 0
@@ -474,8 +474,11 @@ def adj_T_L(qc: QuantumCircuit, cbits, pos: int, ecc = False):
 def adj_Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
     state_inj = ClassicalRegister(8)
     qc.add_register(state_inj)
+    flags = ClassicalRegister(6)
+    qc.add_register(flags)
 
     anc = qc.num_qubits - 1
+    ancc = anc - 1
 
     for i in range(7):
         qc.reset(i+7*2)
@@ -521,66 +524,87 @@ def adj_Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
     qc.measure(anc-1, state_inj[0])
     qc.measure(anc, state_inj[1])
     ##########################################QEC Block#######################################
-    qc.reset(anc)
+    qc.reset(anc), qc.reset(ancc)
     ##################################Z-Stabilizers##########################################
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
     qc.cx(0+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(2+7*2, anc)
     qc.cx(4+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(6+7*2, anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[4])
-    qc.reset(anc)
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, state_inj[4]), qc.measure(ancc, flags[0])
+    qc.reset(anc), qc.reset(ancc)
 
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
     qc.cx(1+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(2+7*2, anc)
     qc.cx(5+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(6+7*2, anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[3])
-    qc.reset(anc)
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, state_inj[3]), qc.measure(ancc, flags[1])
+    qc.reset(anc), qc.reset(ancc)
 
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
     qc.cx(3+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(4+7*2, anc)
     qc.cx(5+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(6+7*2, anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[2])
-    qc.reset(anc)
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, state_inj[2]), qc.measure(ancc, flags[2])
+    qc.reset(anc), qc.reset(ancc)
     ##################################X-Stabilizers##############################################
+    qc.id(anc), qc.id(ancc)
     qc.h(anc)
     qc.cx(anc, 0+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 2+7*2)
     qc.cx(anc, 4+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 6+7*2)
     qc.h(anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[7])
-    qc.reset(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[7]), qc.measure(ancc, flags[3])
+    qc.reset(anc), qc.reset(ancc)
 
+    qc.id(anc), qc.id(ancc)
     qc.h(anc)
     qc.cx(anc, 1+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 2+7*2)
     qc.cx(anc, 5+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 6+7*2)
     qc.h(anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[6])
-    qc.reset(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[6]), qc.measure(ancc, flags[4])
+    qc.reset(anc), qc.reset(ancc)
 
+    qc.id(anc), qc.id(ancc)
     qc.h(anc)
     qc.cx(anc, 3+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 4+7*2)
     qc.cx(anc, 5+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 6+7*2)
     qc.h(anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[5])
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[5]), qc.measure(ancc, flags[5])
     ###############################QEC-Block####################################################
     
     with qc.if_test((state_inj[2],0)):             #qbit 0
@@ -885,6 +909,8 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     result = job.result()
     counts = result.get_counts()
 
+    print(counts)
+
     #print(counts)
 
     bitstring = list(counts.keys())
@@ -953,74 +979,92 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     # print("Postselection discarded: ", err - (preselected/shots)*100, "%")
     return zeros, ones, preselected, post#,magic
 
-def qec(qc: QuantumCircuit, qecc, pos: int):
+def qec_ft(qc: QuantumCircuit, qecc, pos: int):
+    flags = ClassicalRegister(6)
+    qc.add_register(flags)
     anc = qc.num_qubits - 1
-    qc.reset(anc)
+    ancc = anc - 1
+    qc.reset(anc), qc.reset(ancc)
     ##################################Z-Stabilizers##########################################
+    qc.h(ancc)
     qc.cx(0+7*pos, anc)
+    qc.cx(ancc,anc)
     qc.cx(2+7*pos, anc)
     qc.cx(4+7*pos, anc)
+    qc.cx(ancc,anc)
     qc.cx(6+7*pos, anc)
 
-    qc.id(anc)
-    qc.measure(anc, qecc[2])
-    qc.reset(anc)
-    qc.id(anc)
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, qecc[2]), qc.measure(ancc, flags[0])
+    qc.reset(anc), qc.reset(ancc)
+    qc.id(anc), qc.id(ancc)
 
+    qc.h(ancc)
     qc.cx(1+7*pos, anc)
+    qc.cx(ancc, anc)
     qc.cx(2+7*pos, anc)
     qc.cx(5+7*pos, anc)
+    qc.cx(ancc, anc)
     qc.cx(6+7*pos, anc)
 
-    qc.id(anc)
-    qc.measure(anc, qecc[1])
-    qc.reset(anc)
-    qc.id(anc)
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, qecc[1]), qc.measure(ancc, flags[1])
+    qc.reset(anc), qc.reset(ancc)
+    qc.id(anc), qc.id(ancc)
 
+    qc.h(ancc)
     qc.cx(3+7*pos, anc)
+    qc.cx(ancc, anc)
     qc.cx(4+7*pos, anc)
     qc.cx(5+7*pos, anc)
+    qc.cx(ancc, anc)
     qc.cx(6+7*pos, anc)
 
-    qc.id(anc)
-    qc.measure(anc, qecc[0])
-    qc.reset(anc)
-    qc.id(anc)
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, qecc[0]), qc.measure(ancc, flags[2])
+    qc.reset(anc), qc.reset(ancc)
+    qc.id(anc), qc.id(ancc)
     ##################################X-Stabilizers##############################################
     qc.h(anc)
     qc.cx(anc, 0+7*pos)
+    qc.cx(anc, ancc)
     qc.cx(anc, 2+7*pos)
     qc.cx(anc, 4+7*pos)
+    qc.cx(anc, ancc)
     qc.cx(anc, 6+7*pos)
     qc.h(anc)
 
-    qc.id(anc)
-    qc.measure(anc, qecc[5])
-    qc.reset(anc)
-    qc.id(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, qecc[5]), qc.measure(ancc, flags[3])
+    qc.reset(anc), qc.reset(ancc)
+    qc.id(anc), qc.id(ancc)
 
     qc.h(anc)
     qc.cx(anc, 1+7*pos)
+    qc.cx(anc, ancc)
     qc.cx(anc, 2+7*pos)
     qc.cx(anc, 5+7*pos)
+    qc.cx(anc, ancc)
     qc.cx(anc, 6+7*pos)
     qc.h(anc)
 
-    qc.id(anc)
-    qc.measure(anc, qecc[4])
-    qc.reset(anc)
-    qc.id(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, qecc[4]), qc.measure(ancc, flags[4])
+    qc.reset(anc), qc.reset(ancc)
+    qc.id(anc), qc.id(ancc)
 
     qc.h(anc)
     qc.cx(anc, 3+7*pos)
+    qc.cx(anc, ancc)
     qc.cx(anc, 4+7*pos)
     qc.cx(anc, 5+7*pos)
+    qc.cx(anc, ancc)
     qc.cx(anc, 6+7*pos)
     qc.h(anc)
 
-    qc.id(anc)
-    qc.measure(anc, qecc[3])
-    qc.reset(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, qecc[3]), qc.measure(ancc, flags[5])
+    qc.reset(anc), qc.reset(ancc)
     ##################################Bitflip Error correction##############################################
     
     with qc.if_test((qecc[0],0)):             #qbit 0
@@ -1109,8 +1153,8 @@ def gen_data(name):
 
         X_L(qc,1)
         H_L(qc,0)
-        CT_L(qc, cbits, qecc, err = False)
-        adj_T_L(qc, cbits, 0)
+        CT_L(qc, cbits, qecc, err=False)
+        adj_T_L(qc, cbits, 0, ecc=False)
         H_L(qc,0)
 
         zeros, ones, preselec, postselec = readout(qc, 0, shots, i)
@@ -1125,9 +1169,10 @@ def gen_data(name):
 
         X_L(qc,1)
         H_L(qc,0)
-        CT_L(qc, cbits, qecc, err = True)
-        qec(qc, qecc, 0)
-        adj_T_L(qc, cbits, 0)
+        qec_ft(qc, qecc, 0), qec_ft(qc, qecc, 1)
+        CT_L(qc, cbits, qecc, err=True)
+        qec_ft(qc, qecc, 0)
+        adj_T_L(qc, cbits, 0, ecc=True)
         H_L(qc,0)
 
         zeros, ones, preselec, postselec = readout(qc, 0, shots, i)
@@ -1135,4 +1180,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("FTSteane_3rd_c{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTSteane_3rd_d{}.txt".format(name), data, delimiter=",")
