@@ -10,6 +10,7 @@ def solovay_kitaev(U, tree, n):
             v = np.array([[np.real(M[0, 0]), np.imag(M[0, 0]), np.real(M[1, 0]), np.imag(M[1, 0])]])
             dist, index = tree['tree'].query(v, k=1)
             name = tree['names'][index[0, 0]]
+            print("Name: ", name)
             if name == '':
                 return gate.I
             else:
