@@ -872,12 +872,12 @@ def adj_root_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, ecc = False):
 
 def CT_L(qc: QuantumCircuit, cbits, qecc, err = False):
     if err:
-        qec(qc, qecc, 0), qec(qc, qecc, 1)
+        qec_ft(qc, qecc, 0), qec_ft(qc, qecc, 1)
     root_T_L(qc, cbits, 0, qecc = qecc, ecc=err)
     root_T_L(qc, cbits, 1, qecc = qecc, ecc=err)
     CNOT_L(qc, 0)
     if err:
-        qec(qc, qecc, 1)
+        qec_ft(qc, qecc, 1)
     adj_root_T_L(qc, cbits, 1, qecc = qecc, ecc=err)
     CNOT_L(qc, 0)
 
