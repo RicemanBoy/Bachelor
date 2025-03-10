@@ -445,7 +445,7 @@ def Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
         with qc.if_test((cbits[2],1)):
             qc.x(i+7*pos)
 
-def T_L(qc: QuantumCircuit, cbits, pos: int, qecc, ecc = False):
+def T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False ,ecc = False):
     H_L(qc, pos=pos)
     adj_S_L(qc, pos=pos)
     H_L(qc, pos=pos)
@@ -456,10 +456,10 @@ def T_L(qc: QuantumCircuit, cbits, pos: int, qecc, ecc = False):
     H_L(qc, pos=pos)
     S_L(qc, pos=pos)
     H_L(qc, pos=pos)
-    if ecc:
+    if err:
         qec_ft(qc, qecc=qecc, pos=pos)
 
-def adj_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, ecc = False):
+def adj_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False, ecc = False):
     H_L(qc, pos=pos)
     adj_S_L(qc, pos=pos)
     H_L(qc, pos=pos)
@@ -470,7 +470,7 @@ def adj_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, ecc = False):
     H_L(qc, pos=pos)
     S_L(qc, pos=pos)
     H_L(qc, pos=pos)
-    if ecc:
+    if err:
         qec_ft(qc, qecc=qecc, pos=pos)
 
 def adj_Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
@@ -843,13 +843,13 @@ approx = generate_basic_approximations(basis, depth=3)
 skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
 rootT = skd(circ)
 
-def root_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, ecc = False):
+def root_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False, ecc = False):
     instruction = rootT.data
     for i in instruction:
         if i.name == "t":
-            T_L(qc, cbits, pos=pos, qecc=qecc, ecc=ecc)
+            T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
         if i.name == "tdg":
-            adj_T_L(qc, cbits, pos=pos, qecc=qecc, ecc=ecc)
+            adj_T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
         if i.name == "h":
             H_L(qc, pos=pos)
 
@@ -860,25 +860,25 @@ approx = generate_basic_approximations(basis, depth=3)
 skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
 adj_rootT = skd(circ)
 
-def adj_root_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, ecc = False):
+def adj_root_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err=False, ecc = False):
     instruction = adj_rootT.data
     for i in instruction:
         if i.name == "t":
-            T_L(qc, cbits, pos=pos, qecc=qecc, ecc=ecc)
+            T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
         if i.name == "tdg":
-            adj_T_L(qc, cbits, pos=pos, qecc=qecc, ecc=ecc)
+            adj_T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
         if i.name == "h":
             H_L(qc, pos=pos)
 
-def CT_L(qc: QuantumCircuit, cbits, qecc, err = False):
+def CT_L(qc: QuantumCircuit, cbits, qecc, err=False, ecc = False):
     if err:
         qec_ft(qc, qecc, 0), qec_ft(qc, qecc, 1)
-    root_T_L(qc, cbits, 0, qecc = qecc, ecc=err)
-    root_T_L(qc, cbits, 1, qecc = qecc, ecc=err)
+    root_T_L(qc, cbits, 0, qecc = qecc, err=err, ecc=ecc)
+    root_T_L(qc, cbits, 1, qecc = qecc, err=err, ecc=ecc)
     CNOT_L(qc, 0)
     if err:
         qec_ft(qc, qecc, 1)
-    adj_root_T_L(qc, cbits, 1, qecc = qecc, ecc=err)
+    adj_root_T_L(qc, cbits, 1, qecc = qecc, err=err, ecc=ecc)
     CNOT_L(qc, 0)
 
 def CS_L(qc: QuantumCircuit, control: int, target: int):
@@ -910,8 +910,6 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
 
     result = job.result()
     counts = result.get_counts()
-
-    print(counts)
 
     #print(counts)
 
@@ -1144,6 +1142,7 @@ def qec_ft(qc: QuantumCircuit, qecc, pos: int):
 ################################################################################################################################################################
 def gen_data(name):
     x = np.linspace(0,0.001,5)
+    x = np.delete(x,0,0)
     shots = 20
     one, zero, one_QEC, zero_QEC, pre, post, pre_QEC, post_QEC = [],[],[],[],[],[],[],[]
     for i in x:
@@ -1155,8 +1154,8 @@ def gen_data(name):
 
         X_L(qc,1)
         H_L(qc,0)
-        CT_L(qc, cbits, qecc, err=False)
-        adj_T_L(qc, cbits, 0, qecc=qecc, ecc=False)
+        CT_L(qc, cbits, qecc, err=False, ecc = False)
+        adj_T_L(qc, cbits, 0, qecc=qecc, err=False, ecc=False)
         H_L(qc,0)
 
         zeros, ones, preselec, postselec = readout(qc, 0, shots, i)
@@ -1172,9 +1171,9 @@ def gen_data(name):
         X_L(qc,1)
         H_L(qc,0)
         qec_ft(qc, qecc, 0), qec_ft(qc, qecc, 1)
-        CT_L(qc, cbits, qecc, err=True)
+        CT_L(qc, cbits, qecc, err=True, ecc = False)
         qec_ft(qc, qecc, 0)
-        adj_T_L(qc, cbits, 0, qecc=qecc, ecc=True)
+        adj_T_L(qc, cbits, 0, qecc=qecc, err=True, ecc=False)
         H_L(qc,0)
 
 
