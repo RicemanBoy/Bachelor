@@ -1174,11 +1174,11 @@ def gen_data(name):
         qec_ft(qc, qecc, 0)
         adj_T_L(qc, cbits, 0, qecc=qecc, err=True, ecc=False)
         H_L(qc,0)
-
+        qec_ft(qc, qecc, 0)
 
         zeros, ones, preselec, postselec = readout(qc, 0, shots, i)
             
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("FTSteane_3rd_e+{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTSteane_3rd_f{}.txt".format(name), data, delimiter=",")
