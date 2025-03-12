@@ -10,7 +10,7 @@ from qiskit.circuit.library import UnitaryGate
 
 ################################################################################################################################################################
 def code_goto(cbits, n=3):             #encodes |00>_L
-    qr = QuantumRegister(7*n+3,"q")
+    qr = QuantumRegister(7*n+2,"q")
     qc = QuantumCircuit(qr, cbits)
     
     anc = qc.num_qubits - 1
@@ -83,10 +83,11 @@ def CNOT_L(qc: QuantumCircuit, control: int):
             qc.cx(i+7,i)
 
 def Ty_L(qc: QuantumCircuit, cbits, pos: int):
-    state_inj = ClassicalRegister(8)
+    state_inj = ClassicalRegister(14)
     qc.add_register(state_inj)
 
     anc = qc.num_qubits - 1
+    ancc = anc - 1
 
     for i in range(7):
         qc.reset(i+7*2)
@@ -117,50 +118,64 @@ def Ty_L(qc: QuantumCircuit, cbits, pos: int):
     qc.cx(3+7*2,4+7*2)
     qc.cx(3+7*2,6+7*2)
     #################################Controlled Hadamards##########################################
-    qc.reset(anc), qc.reset(anc-1)
-    qc.h(anc-1)
+    qc.reset(anc), qc.reset(ancc)
+    qc.h(ancc)
     for i in range(7):
         #qc.ch(anc-1,6-i+2*7)
         qc.ry(-np.pi/4,6-i+2*7)
-        qc.cz(anc-1,6-i+2*7)
+        qc.cz(ancc,6-i+2*7)
         qc.ry(np.pi/4,6-i+2*7)
         if i == 0:
-            qc.cx(anc-1,anc)
+            qc.cx(ancc,anc)
         if i == 5:
-            qc.cx(anc-1,anc)
-    qc.h(anc-1)
-    qc.measure(anc-1, state_inj[0])
+            qc.cx(ancc,anc)
+    qc.h(ancc)
+    qc.measure(ancc, state_inj[0])
     qc.measure(anc, state_inj[1])
     ##########################################QEC Block#######################################
-    qc.reset(anc)
+    qc.reset(anc), qc.reset(ancc)
     ##################################Z-Stabilizers##########################################
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
     qc.cx(0+7*2, anc)
     qc.cx(2+7*2, anc)
     qc.cx(4+7*2, anc)
     qc.cx(6+7*2, anc)
+    qc.h(ancc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[2])
-    qc.reset(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[2]), qc.measure(ancc, state_inj[8])
+    qc.reset(anc), qc.reset(ancc)
 
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
+    qc.cx(ancc, anc)
     qc.cx(1+7*2, anc)
     qc.cx(2+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(5+7*2, anc)
     qc.cx(6+7*2, anc)
+    qc.h(ancc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[3])
-    qc.reset(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[3]), qc.measure(ancc, state_inj[9])
+    qc.reset(anc), qc.reset(ancc)
 
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
+    qc.cx(ancc, anc)
     qc.cx(3+7*2, anc)
     qc.cx(4+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(5+7*2, anc)
     qc.cx(6+7*2, anc)
+    qc.h(ancc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[4])
-    qc.reset(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[4]), qc.measure(ancc, state_inj[10])
+    qc.reset(anc), qc.reset(ancc)
     ##################################X-Stabilizers##############################################
+    qc.id(anc), qc.id(ancc)
     qc.h(anc)
     qc.cx(anc, 0+7*2)
     qc.cx(anc, 2+7*2)
@@ -168,30 +183,36 @@ def Ty_L(qc: QuantumCircuit, cbits, pos: int):
     qc.cx(anc, 6+7*2)
     qc.h(anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[5])
-    qc.reset(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[5]), qc.measure(ancc, state_inj[11])
+    qc.reset(anc), qc.reset(ancc)
 
+    qc.id(anc), qc.id(ancc)
     qc.h(anc)
+    qc.cx(anc, ancc)
     qc.cx(anc, 1+7*2)
     qc.cx(anc, 2+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 5+7*2)
     qc.cx(anc, 6+7*2)
-    qc.h(anc)
+    qc.h(anc), qc.reset(ancc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[6])
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[6]), qc.measure(ancc, state_inj[12])
     qc.reset(anc)
 
+    qc.id(anc), qc.id(ancc)
     qc.h(anc)
+    qc.cx(anc, ancc)
     qc.cx(anc, 3+7*2)
     qc.cx(anc, 4+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 5+7*2)
     qc.cx(anc, 6+7*2)
     qc.h(anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[7])
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[7]), qc.measure(ancc, state_inj[13])
     
     ########################Controlled-Y Gate####################################################
     adj_S_L(qc, pos)
@@ -445,7 +466,7 @@ def Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
         with qc.if_test((cbits[2],1)):
             qc.x(i+7*pos)
 
-def T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False ,ecc = False):
+def T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False , ecc = False):
     H_L(qc, pos=pos)
     adj_S_L(qc, pos=pos)
     H_L(qc, pos=pos)
@@ -456,8 +477,8 @@ def T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False ,ecc = False):
     H_L(qc, pos=pos)
     S_L(qc, pos=pos)
     H_L(qc, pos=pos)
-    if err:
-        qec_ft(qc, qecc=qecc, pos=pos)
+    # if err:
+    #     qec_ft(qc, qecc=qecc, pos=pos)
 
 def adj_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False, ecc = False):
     H_L(qc, pos=pos)
@@ -470,8 +491,8 @@ def adj_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False, ecc = False)
     H_L(qc, pos=pos)
     S_L(qc, pos=pos)
     H_L(qc, pos=pos)
-    if err:
-        qec_ft(qc, qecc=qecc, pos=pos)
+    # if err:
+    #     qec_ft(qc, qecc=qecc, pos=pos)
 
 def adj_Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
     state_inj = ClassicalRegister(8)
@@ -704,10 +725,11 @@ def adj_Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
             qc.h(i+7*pos)
 
 def adj_Ty_L(qc: QuantumCircuit, cbits, pos: int):
-    state_inj = ClassicalRegister(8)
+    state_inj = ClassicalRegister(14)
     qc.add_register(state_inj)
 
     anc = qc.num_qubits - 1
+    ancc = anc - 1
 
     for i in range(7):
         qc.reset(i+7*2)
@@ -739,49 +761,63 @@ def adj_Ty_L(qc: QuantumCircuit, cbits, pos: int):
     qc.cx(3+7*2,6+7*2)
     #################################Controlled Hadamards##########################################
     qc.reset(anc), qc.reset(anc-1)
-    qc.h(anc-1)
+    qc.h(ancc)
     for i in range(7):
         #qc.ch(anc-1,6-i+2*7)
         qc.ry(-np.pi/4,6-i+2*7)
-        qc.cz(anc-1,6-i+2*7)
+        qc.cz(ancc,6-i+2*7)
         qc.ry(np.pi/4,6-i+2*7)
         if i == 0:
-            qc.cx(anc-1,anc)
+            qc.cx(ancc,anc)
         if i == 5:
-            qc.cx(anc-1,anc)
-    qc.h(anc-1)
-    qc.measure(anc-1, state_inj[0])
+            qc.cx(ancc,anc)
+    qc.h(ancc)
+    qc.measure(ancc, state_inj[0])
     qc.measure(anc, state_inj[1])
     ##########################################QEC Block#######################################
-    qc.reset(anc)
+    qc.reset(anc), qc.reset(ancc)
     ##################################Z-Stabilizers##########################################
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
     qc.cx(0+7*2, anc)
     qc.cx(2+7*2, anc)
     qc.cx(4+7*2, anc)
     qc.cx(6+7*2, anc)
+    qc.h(ancc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[2])
-    qc.reset(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[2]), qc.measure(ancc, state_inj[8])
+    qc.reset(anc), qc.reset(ancc)
 
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
+    qc.cx(ancc, anc)
     qc.cx(1+7*2, anc)
     qc.cx(2+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(5+7*2, anc)
     qc.cx(6+7*2, anc)
+    qc.h(ancc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[3])
-    qc.reset(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[3]), qc.measure(ancc, state_inj[9])
+    qc.reset(anc), qc.reset(ancc)
 
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
+    qc.cx(ancc, anc)
     qc.cx(3+7*2, anc)
     qc.cx(4+7*2, anc)
+    qc.cx(ancc, anc)
     qc.cx(5+7*2, anc)
     qc.cx(6+7*2, anc)
+    qc.h(ancc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[4])
-    qc.reset(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[4]), qc.measure(ancc, state_inj[10])
+    qc.reset(anc), qc.reset(ancc)
     ##################################X-Stabilizers##############################################
+    qc.id(anc), qc.id(ancc)
     qc.h(anc)
     qc.cx(anc, 0+7*2)
     qc.cx(anc, 2+7*2)
@@ -789,30 +825,36 @@ def adj_Ty_L(qc: QuantumCircuit, cbits, pos: int):
     qc.cx(anc, 6+7*2)
     qc.h(anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[5])
-    qc.reset(anc)
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[5]), qc.measure(ancc, state_inj[11])
+    qc.reset(anc), qc.reset(ancc)
 
+    qc.id(anc), qc.id(ancc)
     qc.h(anc)
+    qc.cx(anc, ancc)
     qc.cx(anc, 1+7*2)
     qc.cx(anc, 2+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 5+7*2)
     qc.cx(anc, 6+7*2)
-    qc.h(anc)
+    qc.h(anc), qc.reset(ancc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[6])
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[6]), qc.measure(ancc, state_inj[12])
     qc.reset(anc)
 
+    qc.id(anc), qc.id(ancc)
     qc.h(anc)
+    qc.cx(anc, ancc)
     qc.cx(anc, 3+7*2)
     qc.cx(anc, 4+7*2)
+    qc.cx(anc, ancc)
     qc.cx(anc, 5+7*2)
     qc.cx(anc, 6+7*2)
     qc.h(anc)
 
-    qc.id(anc)
-    qc.measure(anc, state_inj[7])
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[7]), qc.measure(ancc, state_inj[13])
     
     ########################Controlled-Y Gate####################################################
     adj_S_L(qc, pos)
@@ -845,11 +887,17 @@ rootT = skd(circ)
 
 def root_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False, ecc = False):
     instruction = rootT.data
+    counter = 0
     for i in instruction:
+        if counter%2 == 0:
+            if err:
+                qec_ft(qc, qecc=qecc, pos=pos)
         if i.name == "t":
             T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
+            counter += 1
         if i.name == "tdg":
             adj_T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
+            counter += 1
         if i.name == "h":
             H_L(qc, pos=pos)
 
@@ -862,11 +910,17 @@ adj_rootT = skd(circ)
 
 def adj_root_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err=False, ecc = False):
     instruction = adj_rootT.data
+    counter = 0
     for i in instruction:
+        if counter%2 == 0:
+            if err:
+                qec_ft(qc, qecc=qecc, pos=pos)
         if i.name == "t":
             T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
+            counter += 1
         if i.name == "tdg":
             adj_T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
+            counter += 1
         if i.name == "h":
             H_L(qc, pos=pos)
 
@@ -910,6 +964,8 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
 
     result = job.result()
     counts = result.get_counts()
+
+    print(counts)
 
     #print(counts)
 
@@ -1161,7 +1217,7 @@ def gen_data(name):
 
         pre.append(preselec), post.append(postselec), one.append(ones), zero.append(zeros)
         ###################################################################################################
-        cbits = ClassicalRegister(3,"c")
+        ccbits = ClassicalRegister(3,"c")
         qc = code_goto(cbits=cbits)
 
         qecc = ClassicalRegister(6)
@@ -1181,4 +1237,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("FTSteane_3rd_f{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTSteane_3rd_g{}.txt".format(name), data, delimiter=",")
