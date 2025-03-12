@@ -965,10 +965,6 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     result = job.result()
     counts = result.get_counts()
 
-    print(counts)
-
-    #print(counts)
-
     bitstring = list(counts.keys())
 
     hmm = list(counts.values())
@@ -977,9 +973,6 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     pre, preselected = [i[allcbits-2:] for i in bitstring], 0
     bits = [i[:7] for i in bitstring]
     postprocess = [i[7:allcbits-10] for i in bitstring]
-
-    #print(bits)
-    #print(postprocess)
 
     for i in range(len(pre)):
         if pre[i].count("1") != 0:
@@ -1197,8 +1190,8 @@ def qec_ft(qc: QuantumCircuit, qecc, pos: int):
 
 ################################################################################################################################################################
 def gen_data(name):
-    x = np.linspace(0.001,0.002,5)
-    shots = 20
+    x = np.linspace(0,0.001,5)
+    shots = 10
     one, zero, one_QEC, zero_QEC, pre, post, pre_QEC, post_QEC = [],[],[],[],[],[],[],[]
     for i in x:
         cbits = ClassicalRegister(3,"c")
@@ -1237,4 +1230,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("FTSteane_3rd_g{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTSteane_3rd_g+{}.txt".format(name), data, delimiter=",")
