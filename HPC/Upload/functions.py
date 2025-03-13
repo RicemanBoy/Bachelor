@@ -887,17 +887,21 @@ rootT = skd(circ)
 
 def root_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False, ecc = False):
     instruction = rootT.data
-    counter = 0
+    #counter = 0
     for i in instruction:
-        if counter%2 == 0:
-            if err:
-                qec_ft(qc, qecc=qecc, pos=pos)
+        #if counter%2 == 0:
+            # if err:
+            #     qec_ft(qc, qecc=qecc, pos=pos)
         if i.name == "t":
             T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
-            counter += 1
+            if err:
+                qec_ft(qc, qecc=qecc, pos=pos)
+            #counter += 1
         if i.name == "tdg":
             adj_T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
-            counter += 1
+            if err:
+                qec_ft(qc, qecc=qecc, pos=pos)
+            #counter += 1
         if i.name == "h":
             H_L(qc, pos=pos)
 
@@ -910,17 +914,21 @@ adj_rootT = skd(circ)
 
 def adj_root_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err=False, ecc = False):
     instruction = adj_rootT.data
-    counter = 0
+    #counter = 0
     for i in instruction:
-        if counter%2 == 0:
-            if err:
-                qec_ft(qc, qecc=qecc, pos=pos)
+        #if counter%2 == 0:
+            # if err:
+            #     qec_ft(qc, qecc=qecc, pos=pos)
         if i.name == "t":
             T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
-            counter += 1
+            if err:
+                qec_ft(qc, qecc=qecc, pos=pos)
+            #counter += 1
         if i.name == "tdg":
             adj_T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
-            counter += 1
+            if err:
+                qec_ft(qc, qecc=qecc, pos=pos)
+            #counter += 1
         if i.name == "h":
             H_L(qc, pos=pos)
 
@@ -1230,4 +1238,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("FTSteane_3rd_g+{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTSteane_3rd_h{}.txt".format(name), data, delimiter=",")
