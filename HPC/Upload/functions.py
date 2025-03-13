@@ -9,6 +9,12 @@ from qiskit_aer.noise import (NoiseModel, pauli_error)
 from qiskit.circuit.library import UnitaryGate
 
 ################################################################################################################################################################
+matrix_h = ([[2**(-0.5),2**(-0.5)],[2**(-0.5),-2**(-0.5)]])
+h_ideal = UnitaryGate(matrix_h)
+
+matrix_cx = ([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]])
+cx_ideal = UnitaryGate(matrix_cx) 
+
 def code_goto(cbits, n=3):             #encodes |00>_L
     qr = QuantumRegister(7*n+2,"q")
     qc = QuantumCircuit(qr, cbits)
@@ -83,7 +89,7 @@ def CNOT_L(qc: QuantumCircuit, control: int):
             qc.cx(i+7,i)
 
 def Ty_L(qc: QuantumCircuit, cbits, pos: int):
-    state_inj = ClassicalRegister(14)
+    state_inj = ClassicalRegister(1)
     qc.add_register(state_inj)
 
     anc = qc.num_qubits - 1
@@ -92,128 +98,38 @@ def Ty_L(qc: QuantumCircuit, cbits, pos: int):
     for i in range(7):
         qc.reset(i+7*2)
 
-    for i in range(7):                        #start noise
-        qc.id(i+7*2)
-
-    qc.h(0+7*2)
-    qc.h(1+7*2)
+    qc.append(h_ideal,[0+7*2])
+    qc.append(h_ideal,[1+7*2])
     qc.ry(np.pi/4,2+7*2)
-    qc.h(3+7*2)
+    qc.append(h_ideal,[3+7*2])
 
-    qc.cx(2+7*2,4+7*2)
-    qc.cx(0+7*2,6+7*2)
+    qc.append(cx_ideal, [4+7*2, 2+7*2])
+    qc.append(cx_ideal, [6+7*2, 0+7*2])
+    
+    qc.append(cx_ideal, [5+7*2, 3+7*2])
 
-    qc.cx(3+7*2,5+7*2)
+    qc.append(cx_ideal, [5+7*2, 2+7*2])
 
-    qc.cx(2+7*2,5+7*2)
+    qc.append(cx_ideal, [4+7*2, 0+7*2])
+    qc.append(cx_ideal, [6+7*2, 1+7*2])
 
-    qc.cx(0+7*2,4+7*2)
-    qc.cx(1+7*2,6+7*2)
+    qc.append(cx_ideal, [2+7*2, 0+7*2])
 
-    qc.cx(0+7*2,2+7*2)
+    qc.append(cx_ideal, [5+7*2, 1+7*2])
 
-    qc.cx(1+7*2,5+7*2)
-
-    qc.cx(1+7*2,2+7*2)
-    qc.cx(3+7*2,4+7*2)
-    qc.cx(3+7*2,6+7*2)
+    qc.append(cx_ideal, [2+7*2, 1+7*2])
+    qc.append(cx_ideal, [4+7*2, 3+7*2])
+    qc.append(cx_ideal, [6+7*2, 3+7*2])
     #################################Controlled Hadamards##########################################
-    qc.reset(anc), qc.reset(ancc)
-    qc.h(ancc)
+    qc.reset(ancc)
+    qc.append(h_ideal,[ancc])
     for i in range(7):
         #qc.ch(anc-1,6-i+2*7)
         qc.ry(-np.pi/4,6-i+2*7)
         qc.cz(ancc,6-i+2*7)
         qc.ry(np.pi/4,6-i+2*7)
-        if i == 0:
-            qc.cx(ancc,anc)
-        if i == 5:
-            qc.cx(ancc,anc)
-    qc.h(ancc)
+    qc.append(h_ideal,[ancc])
     qc.measure(ancc, state_inj[0])
-    qc.measure(anc, state_inj[1])
-    ##########################################QEC Block#######################################
-    qc.reset(anc), qc.reset(ancc)
-    ##################################Z-Stabilizers##########################################
-    qc.id(anc), qc.id(ancc)
-    qc.h(ancc)
-    qc.cx(0+7*2, anc)
-    qc.cx(2+7*2, anc)
-    qc.cx(4+7*2, anc)
-    qc.cx(6+7*2, anc)
-    qc.h(ancc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.measure(anc, state_inj[2]), qc.measure(ancc, state_inj[8])
-    qc.reset(anc), qc.reset(ancc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.h(ancc)
-    qc.cx(ancc, anc)
-    qc.cx(1+7*2, anc)
-    qc.cx(2+7*2, anc)
-    qc.cx(ancc, anc)
-    qc.cx(5+7*2, anc)
-    qc.cx(6+7*2, anc)
-    qc.h(ancc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.measure(anc, state_inj[3]), qc.measure(ancc, state_inj[9])
-    qc.reset(anc), qc.reset(ancc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.h(ancc)
-    qc.cx(ancc, anc)
-    qc.cx(3+7*2, anc)
-    qc.cx(4+7*2, anc)
-    qc.cx(ancc, anc)
-    qc.cx(5+7*2, anc)
-    qc.cx(6+7*2, anc)
-    qc.h(ancc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.measure(anc, state_inj[4]), qc.measure(ancc, state_inj[10])
-    qc.reset(anc), qc.reset(ancc)
-    ##################################X-Stabilizers##############################################
-    qc.id(anc), qc.id(ancc)
-    qc.h(anc)
-    qc.cx(anc, 0+7*2)
-    qc.cx(anc, 2+7*2)
-    qc.cx(anc, 4+7*2)
-    qc.cx(anc, 6+7*2)
-    qc.h(anc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.measure(anc, state_inj[5]), qc.measure(ancc, state_inj[11])
-    qc.reset(anc), qc.reset(ancc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.h(anc)
-    qc.cx(anc, ancc)
-    qc.cx(anc, 1+7*2)
-    qc.cx(anc, 2+7*2)
-    qc.cx(anc, ancc)
-    qc.cx(anc, 5+7*2)
-    qc.cx(anc, 6+7*2)
-    qc.h(anc), qc.reset(ancc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.measure(anc, state_inj[6]), qc.measure(ancc, state_inj[12])
-    qc.reset(anc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.h(anc)
-    qc.cx(anc, ancc)
-    qc.cx(anc, 3+7*2)
-    qc.cx(anc, 4+7*2)
-    qc.cx(anc, ancc)
-    qc.cx(anc, 5+7*2)
-    qc.cx(anc, 6+7*2)
-    qc.h(anc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.measure(anc, state_inj[7]), qc.measure(ancc, state_inj[13])
-    
     ########################Controlled-Y Gate####################################################
     adj_S_L(qc, pos)
     for i in range(7):
@@ -725,7 +641,7 @@ def adj_Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
             qc.h(i+7*pos)
 
 def adj_Ty_L(qc: QuantumCircuit, cbits, pos: int):
-    state_inj = ClassicalRegister(14)
+    state_inj = ClassicalRegister(1)
     qc.add_register(state_inj)
 
     anc = qc.num_qubits - 1
@@ -734,128 +650,38 @@ def adj_Ty_L(qc: QuantumCircuit, cbits, pos: int):
     for i in range(7):
         qc.reset(i+7*2)
 
-    for i in range(7):                        #start noise
-        qc.id(i+7*2)
-
-    qc.h(0+7*2)
-    qc.h(1+7*2)
+    qc.append(h_ideal,[0+7*2])
+    qc.append(h_ideal,[1+7*2])
     qc.ry(np.pi/4,2+7*2)
-    qc.h(3+7*2)
+    qc.append(h_ideal,[3+7*2])
 
-    qc.cx(2+7*2,4+7*2)
-    qc.cx(0+7*2,6+7*2)
+    qc.append(cx_ideal, [4+7*2, 2+7*2])
+    qc.append(cx_ideal, [6+7*2, 0+7*2])
+    
+    qc.append(cx_ideal, [5+7*2, 3+7*2])
 
-    qc.cx(3+7*2,5+7*2)
+    qc.append(cx_ideal, [5+7*2, 2+7*2])
 
-    qc.cx(2+7*2,5+7*2)
+    qc.append(cx_ideal, [4+7*2, 0+7*2])
+    qc.append(cx_ideal, [6+7*2, 1+7*2])
 
-    qc.cx(0+7*2,4+7*2)
-    qc.cx(1+7*2,6+7*2)
+    qc.append(cx_ideal, [2+7*2, 0+7*2])
 
-    qc.cx(0+7*2,2+7*2)
+    qc.append(cx_ideal, [5+7*2, 1+7*2])
 
-    qc.cx(1+7*2,5+7*2)
-
-    qc.cx(1+7*2,2+7*2)
-    qc.cx(3+7*2,4+7*2)
-    qc.cx(3+7*2,6+7*2)
+    qc.append(cx_ideal, [2+7*2, 1+7*2])
+    qc.append(cx_ideal, [4+7*2, 3+7*2])
+    qc.append(cx_ideal, [6+7*2, 3+7*2])
     #################################Controlled Hadamards##########################################
-    qc.reset(anc), qc.reset(anc-1)
+    qc.reset(ancc)
     qc.h(ancc)
     for i in range(7):
         #qc.ch(anc-1,6-i+2*7)
         qc.ry(-np.pi/4,6-i+2*7)
         qc.cz(ancc,6-i+2*7)
         qc.ry(np.pi/4,6-i+2*7)
-        if i == 0:
-            qc.cx(ancc,anc)
-        if i == 5:
-            qc.cx(ancc,anc)
     qc.h(ancc)
     qc.measure(ancc, state_inj[0])
-    qc.measure(anc, state_inj[1])
-    ##########################################QEC Block#######################################
-    qc.reset(anc), qc.reset(ancc)
-    ##################################Z-Stabilizers##########################################
-    qc.id(anc), qc.id(ancc)
-    qc.h(ancc)
-    qc.cx(0+7*2, anc)
-    qc.cx(2+7*2, anc)
-    qc.cx(4+7*2, anc)
-    qc.cx(6+7*2, anc)
-    qc.h(ancc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.measure(anc, state_inj[2]), qc.measure(ancc, state_inj[8])
-    qc.reset(anc), qc.reset(ancc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.h(ancc)
-    qc.cx(ancc, anc)
-    qc.cx(1+7*2, anc)
-    qc.cx(2+7*2, anc)
-    qc.cx(ancc, anc)
-    qc.cx(5+7*2, anc)
-    qc.cx(6+7*2, anc)
-    qc.h(ancc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.measure(anc, state_inj[3]), qc.measure(ancc, state_inj[9])
-    qc.reset(anc), qc.reset(ancc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.h(ancc)
-    qc.cx(ancc, anc)
-    qc.cx(3+7*2, anc)
-    qc.cx(4+7*2, anc)
-    qc.cx(ancc, anc)
-    qc.cx(5+7*2, anc)
-    qc.cx(6+7*2, anc)
-    qc.h(ancc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.measure(anc, state_inj[4]), qc.measure(ancc, state_inj[10])
-    qc.reset(anc), qc.reset(ancc)
-    ##################################X-Stabilizers##############################################
-    qc.id(anc), qc.id(ancc)
-    qc.h(anc)
-    qc.cx(anc, 0+7*2)
-    qc.cx(anc, 2+7*2)
-    qc.cx(anc, 4+7*2)
-    qc.cx(anc, 6+7*2)
-    qc.h(anc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.measure(anc, state_inj[5]), qc.measure(ancc, state_inj[11])
-    qc.reset(anc), qc.reset(ancc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.h(anc)
-    qc.cx(anc, ancc)
-    qc.cx(anc, 1+7*2)
-    qc.cx(anc, 2+7*2)
-    qc.cx(anc, ancc)
-    qc.cx(anc, 5+7*2)
-    qc.cx(anc, 6+7*2)
-    qc.h(anc), qc.reset(ancc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.measure(anc, state_inj[6]), qc.measure(ancc, state_inj[12])
-    qc.reset(anc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.h(anc)
-    qc.cx(anc, ancc)
-    qc.cx(anc, 3+7*2)
-    qc.cx(anc, 4+7*2)
-    qc.cx(anc, ancc)
-    qc.cx(anc, 5+7*2)
-    qc.cx(anc, 6+7*2)
-    qc.h(anc)
-
-    qc.id(anc), qc.id(ancc)
-    qc.measure(anc, state_inj[7]), qc.measure(ancc, state_inj[13])
-    
     ########################Controlled-Y Gate####################################################
     adj_S_L(qc, pos)
     for i in range(7):
@@ -1198,7 +1024,7 @@ def qec_ft(qc: QuantumCircuit, qecc, pos: int):
 
 ################################################################################################################################################################
 def gen_data(name):
-    x = np.linspace(0.001,0.002,5)
+    x = np.linspace(0,0.001,5)
     shots = 10
     one, zero, one_QEC, zero_QEC, pre, post, pre_QEC, post_QEC = [],[],[],[],[],[],[],[]
     for i in x:
@@ -1238,4 +1064,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("FTSteane_3rd_h+{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTSteane_3rd_i{}.txt".format(name), data, delimiter=",")
