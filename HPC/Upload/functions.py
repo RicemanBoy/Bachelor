@@ -1024,8 +1024,8 @@ def qec_ft(qc: QuantumCircuit, qecc, pos: int):
 
 ################################################################################################################################################################
 def gen_data(name):
-    x = np.linspace(0,0.001,5)
-    shots = 10
+    x = np.linspace(0.001,0.002,5)
+    shots = 30
     one, zero, one_QEC, zero_QEC, pre, post, pre_QEC, post_QEC = [],[],[],[],[],[],[],[]
     for i in x:
         cbits = ClassicalRegister(3,"c")
@@ -1064,4 +1064,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("FTSteane_3rd_i{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTSteane_3rd_j{}.txt".format(name), data, delimiter=",")
