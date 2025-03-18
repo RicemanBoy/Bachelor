@@ -66,9 +66,11 @@ def H_L(qc: QuantumCircuit, pos: int):
         qc.h(i+7*pos)
 
 def S_L(qc: QuantumCircuit, pos: int):
-    for i in range(7):
-        qc.z(i+7*pos)
-        qc.s(i+7*pos)
+    # for i in range(7):
+    #     qc.z(i+7*pos)
+    #     qc.s(i+7*pos)
+    qc.s(0+7*pos), qc.s(1+7*pos), qc.s(3+7*pos), qc.s(6+7*pos)
+    qc.sdg(2+7*pos), qc.sdg(4+7*pos), qc.sdg(5+7*pos)
 
 def CZ_L(qc: QuantumCircuit):
     H_L(qc, 0)
@@ -76,9 +78,11 @@ def CZ_L(qc: QuantumCircuit):
     H_L(qc, 0)
 
 def adj_S_L(qc: QuantumCircuit, pos: int):
-    for i in range(7):
-        qc.z(i+7*pos)
-        qc.sdg(i+7*pos)
+    # for i in range(7):
+    #     qc.z(i+7*pos)
+    #     qc.sdg(i+7*pos)
+    qc.sdg(0+7*pos), qc.sdg(1+7*pos), qc.sdg(3+7*pos), qc.sdg(6+7*pos)
+    qc.s(2+7*pos), qc.s(4+7*pos), qc.s(5+7*pos)
 
 def CNOT_L(qc: QuantumCircuit, control: int):
     if control == 0:
@@ -1044,7 +1048,7 @@ def gen_data(name):
 
         pre.append(preselec), post.append(postselec), one.append(ones), zero.append(zeros)
         ###################################################################################################
-        ccbits = ClassicalRegister(3,"c")
+        cbits = ClassicalRegister(3,"c")
         qc = code_goto(cbits=cbits)
 
         qecc = ClassicalRegister(6)
@@ -1064,4 +1068,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("FTSteane_3rd_j{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTSteane_3rd_k{}.txt".format(name), data, delimiter=",")
