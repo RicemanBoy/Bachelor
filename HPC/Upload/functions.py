@@ -268,6 +268,7 @@ def CT_L(qc: QuantumCircuit, had = "00", qecc = False):
         root_T_L(qc, had = False, pos=1)
         CNOT(qc, had = had, control=0)
         if qecc:
+            qec(qc, had = False, pos = 0)
             qec(qc, had = False, pos = 1)
         adj_root_T_L(qc, had = False, pos=1)
         CNOT(qc, had = had, control=0)
@@ -279,6 +280,7 @@ def CT_L(qc: QuantumCircuit, had = "00", qecc = False):
         root_T_L(qc, had = True, pos=1)
         CNOT(qc, had = had, control=0)
         if qecc:
+            qec(qc, had = False, pos = 0)
             qec(qc, had = True, pos = 1)
         adj_root_T_L(qc, had = True, pos=1)
         CNOT(qc, had = had, control=0)
@@ -290,6 +292,7 @@ def CT_L(qc: QuantumCircuit, had = "00", qecc = False):
         root_T_L(qc, had = False, pos=1)
         CNOT(qc, had = had, control=0)
         if qecc:
+            qec(qc, had = True, pos = 0)
             qec(qc, had = False, pos = 1)
         adj_root_T_L(qc, had = False, pos=1)
         CNOT(qc, had = had, control=0)
@@ -301,6 +304,7 @@ def CT_L(qc: QuantumCircuit, had = "00", qecc = False):
         root_T_L(qc, had = True, pos=1)
         CNOT(qc, had = had, control=0)
         if qecc:
+            qec(qc, had = True, pos = 0)
             qec(qc, had = True, pos = 1)
         adj_root_T_L(qc, had = True, pos=1)
         CNOT(qc, had = had, control=0)
@@ -812,8 +816,8 @@ def qec(qc: QuantumCircuit, had = False, pos = 0):
 
 ################################################################################################################################################################
 def gen_data(name):
-    x = np.linspace(0,0.02,20)
-    shots = 100
+    x = np.linspace(0,0.02,10)
+    shots = 200
     one, zero, post, one_QEC, zero_QEC, post_QEC = [],[],[],[],[],[]
     for i in x:
         qc = rot_surf_code(2)
@@ -826,7 +830,6 @@ def gen_data(name):
         qec(qc, True, 0)
         adj_T_L(qc, True, 0)
         H_L(qc ,pos=0)
-        qec(qc, False, 0)
 
         zeros, ones, err = readout(qc, had=2, pos=0, shots=shots, noise=i)
 
@@ -848,4 +851,4 @@ def gen_data(name):
         one.append(ones), zero.append(zeros), post.append(err)
 
     data = np.array((x,zero,one,post,zero_QEC,one_QEC,post_QEC))
-    np.savetxt("FTRotSurf_3rd_a{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTRotSurf_3rd_b{}.txt".format(name), data, delimiter=",")
