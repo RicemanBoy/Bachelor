@@ -319,15 +319,15 @@ def adj_root_T_L(qc: QuantumCircuit, q: list, pos: int, m:list, tracker):
             H_L(qc, q, pos=pos)
 
 def CT_L(qc: QuantumCircuit, q: list, n: list, tracker, err = False):
-    if err:
-        qec_ft(qc, q, tracker)
+    # if err:
+    #     qec_ft(qc, q, tracker)
     root_T_L(qc, q, 0, n, tracker)
     if err:
         qec_ft(qc, q, tracker)
     root_T_L(qc, q, 1, n, tracker)
     CNOT_L(qc, q, 0)
-    if err:
-        qec_ft(qc, q, tracker)
+    # if err:
+    #     qec_ft(qc, q, tracker)
     adj_root_T_L(qc, q, 1, n, tracker)
     CNOT_L(qc, q, 0)
 
@@ -798,14 +798,10 @@ def fullpp_ft(counts: dict, shots: int, cbits: int, track, two = True):
     bitstring = list(counts.keys())
     hmm = list(counts.values())
 
-    print(bitstring)
-
     bitstring = [i.replace(" ","") for i in bitstring]
 
     pre, preselected = [i[cbits-7:] for i in bitstring], 0
     bits = [i[:12] for i in bitstring]
-
-    print(pre)
 
     qf = [i[12:cbits-8] for i in bitstring]
 
@@ -892,7 +888,7 @@ def fullpp_ft(counts: dict, shots: int, cbits: int, track, two = True):
 ################################################################################################################################################################
 def gen_data(name):
     x = np.linspace(0.0,0.02,20)
-    shots = 100
+    shots = 200
     pre, post, nn, ne, en, ee, pre2, two, post2, nn2, ne2, ee2, en2 = [],[],[],[],[],[],[],[],[],[],[],[],[]
     for i in x:
         qc, q, tracker = code_ft()
@@ -919,11 +915,10 @@ def gen_data(name):
         qec_ft(qc, q, tracker)
         adj_T_L(qc, q, 0)
         H_L(qc, q, 0)
-        qec_ft(qc, q, tracker)
         counts, cbits = readout(qc, shots, q, i)
         result = fullpp_ft(counts, shots, cbits, tracker, True)
             
         pre2.append(result[0]), two.append(result[1]), post2.append(result[2]), nn2.append(result[3]), ne2.append(result[4]), en2.append(result[5]), ee2.append(result[6])
 
     data = np.array((x,pre,post,nn,ne,en,ee,pre2,two,post2,nn2,ne2,en2,ee2))
-    np.savetxt("FTCarbon_3rd_a{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTCarbon_3rd_b{}.txt".format(name), data, delimiter=",")
