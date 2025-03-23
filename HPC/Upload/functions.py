@@ -13,276 +13,700 @@ matrix_h = ([[2**(-0.5),2**(-0.5)],[2**(-0.5),-2**(-0.5)]])
 h_ideal = UnitaryGate(matrix_h)
 
 matrix_cx = ([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]])
-cx_ideal = UnitaryGate(matrix_cx)       #Erst Target, dann Control Qubit!!
+cx_ideal = UnitaryGate(matrix_cx) 
 
-matrix_x = ([[0,1],[1,0]])
-x_ideal = UnitaryGate(matrix_x)
-
-matrix_z = ([[1,0],[0,-1]])
-z_ideal = UnitaryGate(matrix_z)
-
-def idk(new: list, a: list, b:list, c:list):
-    for i in a:
-        for j in b:
-            for k in c:
-                new.append(i+j+k)
-
-def X_L(qc: QuantumCircuit, q: list, pos: int):
-    qc.x(q[3])
-    qc.x(q[10])
-    if pos == 0:
-        qc.x(q[0])
-        qc.x(q[11])
-    elif pos == 1:
-        qc.x(q[1])
-        qc.x(q[9])
-
-def Z_L(qc: QuantumCircuit, q: list, pos: int):
-    qc.z(q[0])
-    qc.z(q[9])
-    if pos == 0:
-        qc.z(q[3])
-        qc.z(q[11])
-    elif pos == 1:
-        qc.z(q[1])
-        qc.z(q[10])
-
-def CNOT_L(qc: QuantumCircuit, q: list, control = 0):
-    for i in range(4):
-        q[i], q[i+8] = q[i+8], q[i]
+def code_goto(cbits, n=3):             #encodes |00>_L
+    qr = QuantumRegister(7*n+2,"q")
+    qc = QuantumCircuit(qr, cbits)
     
+    anc = qc.num_qubits - 1
+
+    for i in range(7*(n-1)):                        #start noise
+        qc.id(i)
+
+    for i in range(n-1):
+        qc.h(1+7*i)
+        qc.h(2+7*i)
+        qc.h(3+7*i)
+
+        qc.cx(1+7*i,0+7*i)
+        qc.cx(3+7*i,5+7*i)
+
+        qc.cx(2+7*i,6+7*i)
+
+        qc.cx(1+7*i,4+7*i)
+
+        qc.cx(2+7*i,0+7*i)
+        qc.cx(3+7*i,6+7*i)
+
+        qc.cx(1+7*i,5+7*i)
+
+        qc.cx(6+7*i,4+7*i)
+
+        qc.cx(0+7*i,anc)
+        qc.cx(5+7*i,anc)
+        qc.cx(6+7*i,anc)
+
+        qc.id(anc)
+        qc.measure(anc,cbits[i])      
+    return qc
+
+def X_L(qc: QuantumCircuit, pos: int):
+    qc.x(0+7*pos)
+    qc.x(1+7*pos)
+    qc.x(2+7*pos)
+
+def Z_L(qc: QuantumCircuit, pos: int):
+    qc.z(0+7*pos)
+    qc.z(1+7*pos)
+    qc.z(2+7*pos)
+    
+def H_L(qc: QuantumCircuit, pos: int):
+    for i in range(7):
+        qc.h(i+7*pos)
+
+def S_L(qc: QuantumCircuit, pos: int):
+    # for i in range(7):
+    #     qc.z(i+7*pos)
+    #     qc.s(i+7*pos)
+    qc.s(0+7*pos), qc.s(1+7*pos), qc.s(3+7*pos), qc.s(6+7*pos)
+    qc.sdg(2+7*pos), qc.sdg(4+7*pos), qc.sdg(5+7*pos)
+
+def CZ_L(qc: QuantumCircuit):
+    H_L(qc, 0)
+    CNOT_L(qc, 1)
+    H_L(qc, 0)
+
+def adj_S_L(qc: QuantumCircuit, pos: int):
+    # for i in range(7):
+    #     qc.z(i+7*pos)
+    #     qc.sdg(i+7*pos)
+    qc.sdg(0+7*pos), qc.sdg(1+7*pos), qc.sdg(3+7*pos), qc.sdg(6+7*pos)
+    qc.s(2+7*pos), qc.s(4+7*pos), qc.s(5+7*pos)
+
+def CNOT_L(qc: QuantumCircuit, control: int):
     if control == 0:
-        q[0], q[1] = q[1], q[0]
-        q[4], q[5] = q[5], q[4]
-        q[8], q[9] = q[9], q[8]
+        for i in range(7):
+            qc.cx(i, i+7)
     else:
-        q[0], q[2] = q[2], q[0]
-        q[4], q[6] = q[6], q[4]
-        q[8], q[10] = q[10], q[8]
+        for i in range(7):
+            qc.cx(i+7,i)
 
-def H_L(qc: QuantumCircuit, q: list, pos: int):                 #state injection vom hadamard für einzelnes hadamard
+def Ty_L(qc: QuantumCircuit, cbits, pos: int):
+    state_inj = ClassicalRegister(1)
+    qc.add_register(state_inj)
+
     anc = qc.num_qubits - 1
-    if pos != 2:
-        qc.reset(anc)
+    ancc = anc - 1
+
+    for i in range(7):
+        qc.reset(i+7*2)
+
+    qc.append(h_ideal,[0+7*2])
+    qc.append(h_ideal,[1+7*2])
+    qc.ry(np.pi/4,2+7*2)
+    qc.append(h_ideal,[3+7*2])
+
+    qc.append(cx_ideal, [4+7*2, 2+7*2])
+    qc.append(cx_ideal, [6+7*2, 0+7*2])
     
-        Z_L(qc, q, pos=pos)
+    qc.append(cx_ideal, [5+7*2, 3+7*2])
 
-        if pos == 0:                  #hier zu Z_L
-            qc.append(cx_ideal, [anc,q[0]])
-            qc.append(cx_ideal, [anc,q[3]])
-            qc.append(cx_ideal, [anc,q[9]])
-            qc.append(cx_ideal, [anc,q[11]])
-        elif pos == 1:
-            qc.append(cx_ideal, [anc,q[0]])
-            qc.append(cx_ideal, [anc,q[1]])
-            qc.append(cx_ideal, [anc,q[9]])
-            qc.append(cx_ideal, [anc,q[10]])
-        qc.append(h_ideal,[anc])
-        if pos == 0:
-            qc.append(cx_ideal, [q[0],anc])
-            qc.append(cx_ideal, [q[3],anc])
-            qc.append(cx_ideal, [q[10],anc])
-            qc.append(cx_ideal, [q[11],anc])
-        elif pos == 1:
-            qc.append(cx_ideal, [q[1],anc])
-            qc.append(cx_ideal, [q[3],anc])
-            qc.append(cx_ideal, [q[9],anc])
-            qc.append(cx_ideal, [q[10],anc])
-        qc.append(h_ideal,[anc])
-        qc.measure(anc, 7)
-        if pos == 0:                        #hier zu X_L
-            with qc.if_test((7,1)):
-                qc.z(q[0])
-                qc.z(q[3])
-                qc.z(q[9])
-                qc.z(q[11])
+    qc.append(cx_ideal, [5+7*2, 2+7*2])
 
-                qc.x(q[0])
-                qc.x(q[3])
-                qc.x(q[10])
-                qc.x(q[11])
-            #q[9], q[10] = q[10], q[9]
-        elif pos == 1:
-            with qc.if_test((7,1)):
-                qc.z(q[0])
-                qc.z(q[1])
-                qc.z(q[9])
-                qc.z(q[10])
+    qc.append(cx_ideal, [4+7*2, 0+7*2])
+    qc.append(cx_ideal, [6+7*2, 1+7*2])
 
-                qc.x(q[1])
-                qc.x(q[3])
-                qc.x(q[9])
-                qc.x(q[10])
-            #q[0], q[3] = q[3], q[0]
-    if pos == 2:
-        for i in range(12):
-            qc.h(q[i])
-        q[0], q[3] = q[3], q[0]
-        q[5], q[6] = q[6], q[5]
-        q[9], q[10] = q[10], q[9]
+    qc.append(cx_ideal, [2+7*2, 0+7*2])
 
-def CZ_L(qc: QuantumCircuit, q:list):
-    H_L(qc, q, 0)
-    CNOT_L(qc, q, 1)
-    H_L(qc, q, 0)
+    qc.append(cx_ideal, [5+7*2, 1+7*2])
 
-def S_L(qc: QuantumCircuit, q: list, pos: int, m: list, tracker):
+    qc.append(cx_ideal, [2+7*2, 1+7*2])
+    qc.append(cx_ideal, [4+7*2, 3+7*2])
+    qc.append(cx_ideal, [6+7*2, 3+7*2])
+    #################################Controlled Hadamards##########################################
+    qc.reset(ancc)
+    qc.append(h_ideal,[ancc])
+    for i in range(7):
+        #qc.ch(anc-1,6-i+2*7)
+        qc.ry(-np.pi/4,6-i+2*7)
+        qc.cz(ancc,6-i+2*7)
+        qc.ry(np.pi/4,6-i+2*7)
+    qc.append(h_ideal,[ancc])
+    qc.measure(ancc, state_inj[0])
+    ########################Controlled-Y Gate####################################################
+    adj_S_L(qc, pos)
+    for i in range(7):
+        qc.cx(i+7*2,i+7*pos)
+    S_L(qc, pos)
+    # read = ClassicalRegister(7)
+    # qc.add_register(read)
+    qc.reset(anc-1)
+    #############################Measure logical state for state injection#############################
+    adj_S_L(qc, pos=2)
+    H_L(qc, pos=2)
+    for i in range(7):
+        qc.cx(i+2*7, anc-1)
+    qc.measure(anc-1,cbits[2])
+    #################################Apply conditioned Ry(pi/2) onto the Target###########################
+    for i in range(7):
+        with qc.if_test((cbits[2],1)):
+            qc.h(i+7*pos)
+    for i in range(3):
+        with qc.if_test((cbits[2],1)):
+            qc.x(i+7*pos)
+
+def Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
+    state_inj = ClassicalRegister(8)
+    qc.add_register(state_inj)
+    flags = ClassicalRegister(6)
+    qc.add_register(flags)
+
     anc = qc.num_qubits - 1
+    ancc = anc - 1
+
+    for i in range(7):
+        qc.reset(i+7*2)
+
+    for i in range(7):                        #start noise
+        qc.id(i+7*2)
+
+    qc.h(0+7*2)
+    qc.h(1+7*2)
+    qc.ry(np.pi/4,2+7*2)
+    qc.h(3+7*2)
+
+    qc.cx(2+7*2,4+7*2)
+    qc.cx(0+7*2,6+7*2)
+
+    qc.cx(3+7*2,5+7*2)
+
+    qc.cx(2+7*2,5+7*2)
+
+    qc.cx(0+7*2,4+7*2)
+    qc.cx(1+7*2,6+7*2)
+
+    qc.cx(0+7*2,2+7*2)
+
+    qc.cx(1+7*2,5+7*2)
+
+    qc.cx(1+7*2,2+7*2)
+    qc.cx(3+7*2,4+7*2)
+    qc.cx(3+7*2,6+7*2)
+    #################################Controlled Hadamards##########################################
+    qc.reset(anc), qc.reset(anc-1)
+    qc.h(anc-1)
+    for i in range(7):
+        #qc.ch(anc-1,6-i+2*7)
+        qc.ry(-np.pi/4,6-i+2*7)
+        qc.cz(anc-1,6-i+2*7)
+        qc.ry(np.pi/4,6-i+2*7)
+        if i == 0:
+            qc.cx(anc-1,anc)
+        if i == 5:
+            qc.cx(anc-1,anc)
+    qc.h(anc-1)
+    qc.measure(anc-1, state_inj[0])
+    qc.measure(anc, state_inj[1])
+    ##########################################QEC Block#######################################
+    qc.reset(anc), qc.reset(ancc)
+    ##################################Z-Stabilizers##########################################
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
+    qc.cx(0+7*2, anc)
+    qc.cx(ancc, anc)
+    qc.cx(2+7*2, anc)
+    qc.cx(4+7*2, anc)
+    qc.cx(ancc, anc)
+    qc.cx(6+7*2, anc)
+
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, state_inj[4]), qc.measure(ancc, flags[0])
+    qc.reset(anc), qc.reset(ancc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
+    qc.cx(1+7*2, anc)
+    qc.cx(ancc, anc)
+    qc.cx(2+7*2, anc)
+    qc.cx(5+7*2, anc)
+    qc.cx(ancc, anc)
+    qc.cx(6+7*2, anc)
+
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, state_inj[3]), qc.measure(ancc, flags[1])
+    qc.reset(anc), qc.reset(ancc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
+    qc.cx(3+7*2, anc)
+    qc.cx(ancc, anc)
+    qc.cx(4+7*2, anc)
+    qc.cx(5+7*2, anc)
+    qc.cx(ancc, anc)
+    qc.cx(6+7*2, anc)
+
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, state_inj[2]), qc.measure(ancc, flags[2])
+    qc.reset(anc), qc.reset(ancc)
+    ##################################X-Stabilizers##############################################
+    qc.id(anc), qc.id(ancc)
+    qc.h(anc)
+    qc.cx(anc, 0+7*2)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 2+7*2)
+    qc.cx(anc, 4+7*2)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 6+7*2)
+    qc.h(anc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[7]), qc.measure(ancc, flags[3])
+    qc.reset(anc), qc.reset(ancc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.h(anc)
+    qc.cx(anc, 1+7*2)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 2+7*2)
+    qc.cx(anc, 5+7*2)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 6+7*2)
+    qc.h(anc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[6]), qc.measure(ancc, flags[4])
+    qc.reset(anc), qc.reset(ancc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.h(anc)
+    qc.cx(anc, 3+7*2)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 4+7*2)
+    qc.cx(anc, 5+7*2)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 6+7*2)
+    qc.h(anc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[5]), qc.measure(ancc, flags[5])
+    ###############################QEC-Block####################################################
+    
+    with qc.if_test((state_inj[2],0)):             #qbit 0
+        with qc.if_test((state_inj[3],0)):
+            with qc.if_test((state_inj[4],1)):
+                qc.x(0+7*pos)
+
+    with qc.if_test((state_inj[2],0)):             #qbit 1
+        with qc.if_test((state_inj[3],1)):
+            with qc.if_test((state_inj[4],0)):
+                qc.x(1+7*pos)
+    
+    with qc.if_test((state_inj[2],0)):             #qbit 2
+        with qc.if_test((state_inj[3],1)):
+            with qc.if_test((state_inj[4],1)):
+                qc.x(2+7*pos)
+    
+    with qc.if_test((state_inj[2],1)):             #qbit 3
+        with qc.if_test((state_inj[3],0)):
+            with qc.if_test((state_inj[4],0)):
+                qc.x(3+7*pos)
+    
+    with qc.if_test((state_inj[2],1)):             #qbit 4
+        with qc.if_test((state_inj[3],0)):
+            with qc.if_test((state_inj[4],1)):
+                qc.x(4+7*pos)
+    
+    with qc.if_test((state_inj[2],1)):             #qbit 5
+        with qc.if_test((state_inj[3],1)):
+            with qc.if_test((state_inj[4],0)):
+                qc.x(5+7*pos)
+    
+    with qc.if_test((state_inj[2],1)):             #qbit 6
+        with qc.if_test((state_inj[3],1)):
+            with qc.if_test((state_inj[4],1)):
+                qc.x(6+7*pos)
+
+    with qc.if_test((state_inj[5],0)):             #qbit 0
+        with qc.if_test((state_inj[6],0)):
+            with qc.if_test((state_inj[7],1)):
+                qc.z(0+7*pos)
+
+    with qc.if_test((state_inj[5],0)):             #qbit 1
+        with qc.if_test((state_inj[6],1)):
+            with qc.if_test((state_inj[7],0)):
+                qc.z(1+7*pos)
+    
+    with qc.if_test((state_inj[5],0)):             #qbit 2
+        with qc.if_test((state_inj[6],1)):
+            with qc.if_test((state_inj[7],1)):
+                qc.z(2+7*pos)
+    
+    with qc.if_test((state_inj[5],1)):             #qbit 3
+        with qc.if_test((state_inj[6],0)):
+            with qc.if_test((state_inj[7],0)):
+                qc.z(3+7*pos)
+    
+    with qc.if_test((state_inj[5],1)):             #qbit 4
+        with qc.if_test((state_inj[6],0)):
+            with qc.if_test((state_inj[7],1)):
+                qc.z(4+7*pos)
+    
+    with qc.if_test((state_inj[5],1)):             #qbit 5
+        with qc.if_test((state_inj[6],1)):
+            with qc.if_test((state_inj[7],0)):
+                qc.z(5+7*pos)
+    
+    with qc.if_test((state_inj[5],1)):             #qbit 6
+        with qc.if_test((state_inj[6],1)):
+            with qc.if_test((state_inj[7],1)):
+                qc.z(6+7*pos)
     qc.reset(anc)
-    qc.append(h_ideal,[anc])
-    qc.s(anc)
-    if pos == 0:                        #zu Z_L
-        qc.append(cx_ideal, [anc,q[0]])
-        qc.append(cx_ideal, [anc,q[3]])
-        qc.append(cx_ideal, [anc,q[9]])
-        qc.append(cx_ideal, [anc,q[11]])
-    elif pos == 1:
-        qc.append(cx_ideal, [anc,q[0]])
-        qc.append(cx_ideal, [anc,q[1]])
-        qc.append(cx_ideal, [anc,q[9]])
-        qc.append(cx_ideal, [anc,q[10]])
+    for i in range(8):
+        qc.measure(anc, state_inj[i])
+    ########################Controlled-Y Gate####################################################
+    adj_S_L(qc, pos)
+    for i in range(7):
+        qc.cx(i+7*2,i+7*pos)
+    S_L(qc, pos)
+    # read = ClassicalRegister(7)
+    # qc.add_register(read)
+    qc.reset(anc-1)
+    #############################Measure logical state for state injection#############################
+    adj_S_L(qc, pos=2)
+    H_L(qc, pos=2)
+    for i in range(7):
+        qc.cx(i+2*7, anc-1)
+    qc.measure(anc-1,cbits[2])
+    #################################Apply conditioned Ry(pi/2) onto the Target###########################
+    for i in range(7):
+        with qc.if_test((cbits[2],1)):
+            qc.h(i+7*pos)
+    for i in range(3):
+        with qc.if_test((cbits[2],1)):
+            qc.x(i+7*pos)
 
-    qc.measure(anc,7)
-    if pos == 0:
-        with qc.if_test((7,1)):
-            qc.z(q[0])
-            qc.z(q[9])
-            qc.z(q[3])
-            qc.z(q[11])
-    elif pos == 1:
-        with qc.if_test((7,1)):
-            qc.z(q[0])
-            qc.z(q[9])
-            qc.z(q[1])
-            qc.z(q[10])
+def T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False , ecc = False):
+    H_L(qc, pos=pos)
+    adj_S_L(qc, pos=pos)
+    H_L(qc, pos=pos)
+    if ecc:
+        Ty_ec_L(qc, cbits, pos=pos)
+    else:
+        Ty_L(qc, cbits, pos=pos)
+    H_L(qc, pos=pos)
+    S_L(qc, pos=pos)
+    H_L(qc, pos=pos)
+    # if err:
+    #     qec_ft(qc, qecc=qecc, pos=pos)
 
-def adj_S_L(qc: QuantumCircuit, q: list, pos: int, m:list, tracker):
+def adj_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False, ecc = False):
+    H_L(qc, pos=pos)
+    adj_S_L(qc, pos=pos)
+    H_L(qc, pos=pos)
+    if ecc:
+        adj_Ty_ec_L(qc, cbits, pos=pos)
+    else:
+        adj_Ty_L(qc, cbits, pos=pos)
+    H_L(qc, pos=pos)
+    S_L(qc, pos=pos)
+    H_L(qc, pos=pos)
+    # if err:
+    #     qec_ft(qc, qecc=qecc, pos=pos)
+
+def adj_Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
+    state_inj = ClassicalRegister(8)
+    qc.add_register(state_inj)
+    flags = ClassicalRegister(6)
+    qc.add_register(flags)
+
     anc = qc.num_qubits - 1
+    ancc = anc - 1
+
+    for i in range(7):
+        qc.reset(i+7*2)
+
+    for i in range(7):                        #start noise
+        qc.id(i+7*2)
+
+    qc.h(0+7*2)
+    qc.h(1+7*2)
+    qc.ry(np.pi/4,2+7*2)
+    qc.h(3+7*2)
+
+    qc.cx(2+7*2,4+7*2)
+    qc.cx(0+7*2,6+7*2)
+
+    qc.cx(3+7*2,5+7*2)
+
+    qc.cx(2+7*2,5+7*2)
+
+    qc.cx(0+7*2,4+7*2)
+    qc.cx(1+7*2,6+7*2)
+
+    qc.cx(0+7*2,2+7*2)
+
+    qc.cx(1+7*2,5+7*2)
+
+    qc.cx(1+7*2,2+7*2)
+    qc.cx(3+7*2,4+7*2)
+    qc.cx(3+7*2,6+7*2)
+    #################################Controlled Hadamards##########################################
+    qc.reset(anc), qc.reset(anc-1)
+    qc.h(anc-1)
+    for i in range(7):
+        #qc.ch(anc-1,6-i+2*7)
+        qc.ry(-np.pi/4,6-i+2*7)
+        qc.cz(anc-1,6-i+2*7)
+        qc.ry(np.pi/4,6-i+2*7)
+        if i == 0:
+            qc.cx(anc-1,anc)
+        if i == 5:
+            qc.cx(anc-1,anc)
+    qc.h(anc-1)
+    qc.measure(anc-1, state_inj[0])
+    qc.measure(anc, state_inj[1])
+    ##########################################QEC Block#######################################
+    qc.reset(anc), qc.reset(ancc)
+    ##################################Z-Stabilizers##########################################
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
+    qc.cx(0+7*2, anc)
+    qc.cx(ancc, anc)
+    qc.cx(2+7*2, anc)
+    qc.cx(4+7*2, anc)
+    qc.cx(ancc, anc)
+    qc.cx(6+7*2, anc)
+
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, state_inj[4]), qc.measure(ancc, flags[0])
+    qc.reset(anc), qc.reset(ancc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
+    qc.cx(1+7*2, anc)
+    qc.cx(ancc, anc)
+    qc.cx(2+7*2, anc)
+    qc.cx(5+7*2, anc)
+    qc.cx(ancc, anc)
+    qc.cx(6+7*2, anc)
+
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, state_inj[3]), qc.measure(ancc, flags[1])
+    qc.reset(anc), qc.reset(ancc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.h(ancc)
+    qc.cx(3+7*2, anc)
+    qc.cx(ancc, anc)
+    qc.cx(4+7*2, anc)
+    qc.cx(5+7*2, anc)
+    qc.cx(ancc, anc)
+    qc.cx(6+7*2, anc)
+
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, state_inj[2]), qc.measure(ancc, flags[2])
+    qc.reset(anc), qc.reset(ancc)
+    ##################################X-Stabilizers##############################################
+    qc.id(anc), qc.id(ancc)
+    qc.h(anc)
+    qc.cx(anc, 0+7*2)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 2+7*2)
+    qc.cx(anc, 4+7*2)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 6+7*2)
+    qc.h(anc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[7]), qc.measure(ancc, flags[3])
+    qc.reset(anc), qc.reset(ancc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.h(anc)
+    qc.cx(anc, 1+7*2)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 2+7*2)
+    qc.cx(anc, 5+7*2)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 6+7*2)
+    qc.h(anc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[6]), qc.measure(ancc, flags[4])
+    qc.reset(anc), qc.reset(ancc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.h(anc)
+    qc.cx(anc, 3+7*2)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 4+7*2)
+    qc.cx(anc, 5+7*2)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 6+7*2)
+    qc.h(anc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, state_inj[5]), qc.measure(ancc, flags[5])
+    ###############################QEC-Block####################################################
+    
+    with qc.if_test((state_inj[2],0)):             #qbit 0
+        with qc.if_test((state_inj[3],0)):
+            with qc.if_test((state_inj[4],1)):
+                qc.x(0+7*pos)
+
+    with qc.if_test((state_inj[2],0)):             #qbit 1
+        with qc.if_test((state_inj[3],1)):
+            with qc.if_test((state_inj[4],0)):
+                qc.x(1+7*pos)
+    
+    with qc.if_test((state_inj[2],0)):             #qbit 2
+        with qc.if_test((state_inj[3],1)):
+            with qc.if_test((state_inj[4],1)):
+                qc.x(2+7*pos)
+    
+    with qc.if_test((state_inj[2],1)):             #qbit 3
+        with qc.if_test((state_inj[3],0)):
+            with qc.if_test((state_inj[4],0)):
+                qc.x(3+7*pos)
+    
+    with qc.if_test((state_inj[2],1)):             #qbit 4
+        with qc.if_test((state_inj[3],0)):
+            with qc.if_test((state_inj[4],1)):
+                qc.x(4+7*pos)
+    
+    with qc.if_test((state_inj[2],1)):             #qbit 5
+        with qc.if_test((state_inj[3],1)):
+            with qc.if_test((state_inj[4],0)):
+                qc.x(5+7*pos)
+    
+    with qc.if_test((state_inj[2],1)):             #qbit 6
+        with qc.if_test((state_inj[3],1)):
+            with qc.if_test((state_inj[4],1)):
+                qc.x(6+7*pos)
+
+    with qc.if_test((state_inj[5],0)):             #qbit 0
+        with qc.if_test((state_inj[6],0)):
+            with qc.if_test((state_inj[7],1)):
+                qc.z(0+7*pos)
+
+    with qc.if_test((state_inj[5],0)):             #qbit 1
+        with qc.if_test((state_inj[6],1)):
+            with qc.if_test((state_inj[7],0)):
+                qc.z(1+7*pos)
+    
+    with qc.if_test((state_inj[5],0)):             #qbit 2
+        with qc.if_test((state_inj[6],1)):
+            with qc.if_test((state_inj[7],1)):
+                qc.z(2+7*pos)
+    
+    with qc.if_test((state_inj[5],1)):             #qbit 3
+        with qc.if_test((state_inj[6],0)):
+            with qc.if_test((state_inj[7],0)):
+                qc.z(3+7*pos)
+    
+    with qc.if_test((state_inj[5],1)):             #qbit 4
+        with qc.if_test((state_inj[6],0)):
+            with qc.if_test((state_inj[7],1)):
+                qc.z(4+7*pos)
+    
+    with qc.if_test((state_inj[5],1)):             #qbit 5
+        with qc.if_test((state_inj[6],1)):
+            with qc.if_test((state_inj[7],0)):
+                qc.z(5+7*pos)
+    
+    with qc.if_test((state_inj[5],1)):             #qbit 6
+        with qc.if_test((state_inj[6],1)):
+            with qc.if_test((state_inj[7],1)):
+                qc.z(6+7*pos)
     qc.reset(anc)
-    qc.append(h_ideal,[anc])
-    qc.sdg(anc)
+    for i in range(8):
+        qc.measure(anc, state_inj[i])
+    ########################Controlled-Y Gate####################################################
+    adj_S_L(qc, pos)
+    for i in range(7):
+        qc.cx(i+7*2,i+7*pos)
+    S_L(qc, pos)
+    # read = ClassicalRegister(7)
+    # qc.add_register(read)
+    qc.reset(anc-1)
+    #############################Measure logical state for state injection#############################
+    adj_S_L(qc, pos=2)
+    H_L(qc, pos=2)
+    for i in range(7):
+        qc.cx(i+2*7, anc-1)
+    qc.measure(anc-1,cbits[2])
+    #################################Apply conditioned Ry(pi/2) onto the Target###########################
+    for i in range(3):
+        with qc.if_test((cbits[2],0)):
+            qc.x(i+7*pos)
+    for i in range(7):
+        with qc.if_test((cbits[2],0)):
+            qc.h(i+7*pos)
 
-    if pos == 0:                        #zu Z_L
-        qc.append(cx_ideal, [anc,q[0]])
-        qc.append(cx_ideal, [anc,q[3]])
-        qc.append(cx_ideal, [anc,q[9]])
-        qc.append(cx_ideal, [anc,q[11]])
-    elif pos == 1:
-        qc.append(cx_ideal, [anc,q[0]])
-        qc.append(cx_ideal, [anc,q[1]])
-        qc.append(cx_ideal, [anc,q[9]])
-        qc.append(cx_ideal, [anc,q[10]])
+def adj_Ty_L(qc: QuantumCircuit, cbits, pos: int):
+    state_inj = ClassicalRegister(1)
+    qc.add_register(state_inj)
 
-    qc.measure(anc,7)
-    if pos == 0:
-        with qc.if_test((7,1)):
-            qc.z(q[0])
-            qc.z(q[9])
-            qc.z(q[3])
-            qc.z(q[11])
-    elif pos == 1:
-        with qc.if_test((7,1)):
-            qc.z(q[0])
-            qc.z(q[9])
-            qc.z(q[1])
-            qc.z(q[10])
-
-def T_L(qc: QuantumCircuit, q: list, pos: int):
     anc = qc.num_qubits - 1
-    qc.reset(anc)
-    qc.append(h_ideal,[anc])
-    qc.t(anc)
+    ancc = anc - 1
 
-    if pos == 0:                        #zu Z_L
-        qc.append(cx_ideal, [anc,q[0]])
-        qc.append(cx_ideal, [anc,q[3]])
-        qc.append(cx_ideal, [anc,q[9]])
-        qc.append(cx_ideal, [anc,q[11]])
-    elif pos == 1:
-        qc.append(cx_ideal, [anc,q[0]])
-        qc.append(cx_ideal, [anc,q[1]])
-        qc.append(cx_ideal, [anc,q[9]])
-        qc.append(cx_ideal, [anc,q[10]])
-    qc.measure(anc,7)
-    if pos == 0:
-        with qc.if_test((7,1)):
-            qc.reset(anc)
-            qc.append(h_ideal,[anc])
-            qc.s(anc)
-            qc.append(cx_ideal, [anc,q[0]])
-            qc.append(cx_ideal, [anc,q[3]])
-            qc.append(cx_ideal, [anc,q[9]])
-            qc.append(cx_ideal, [anc,q[11]])
-            qc.measure(anc,7)
-            with qc.if_test((7,1)):
-                qc.z(q[0])
-                qc.z(q[3])
-                qc.z(q[9])
-                qc.z(q[11])
-    elif pos == 1:
-        with qc.if_test((7,1)):
-            qc.reset(anc)
-            qc.append(h_ideal,[anc])
-            qc.s(anc)
-            qc.append(cx_ideal, [anc,q[0]])
-            qc.append(cx_ideal, [anc,q[1]])
-            qc.append(cx_ideal, [anc,q[9]])
-            qc.append(cx_ideal, [anc,q[10]])
-            qc.measure(anc,7)
-            with qc.if_test((7,1)):
-                qc.z(q[0])
-                qc.z(q[1])
-                qc.z(q[9])
-                qc.z(q[10])
+    for i in range(7):
+        qc.reset(i+7*2)
 
-def adj_T_L(qc: QuantumCircuit, q: list, pos: int):
-    anc = qc.num_qubits - 1
-    qc.reset(anc)
-    qc.append(h_ideal,[anc])
-    qc.tdg(anc)
+    qc.append(h_ideal,[0+7*2])
+    qc.append(h_ideal,[1+7*2])
+    qc.ry(np.pi/4,2+7*2)
+    qc.append(h_ideal,[3+7*2])
 
-    if pos == 0:                        #zu Z_L
-        qc.append(cx_ideal, [anc,q[0]])
-        qc.append(cx_ideal, [anc,q[3]])
-        qc.append(cx_ideal, [anc,q[9]])
-        qc.append(cx_ideal, [anc,q[11]])
-    elif pos == 1:
-        qc.append(cx_ideal, [anc,q[0]])
-        qc.append(cx_ideal, [anc,q[1]])
-        qc.append(cx_ideal, [anc,q[9]])
-        qc.append(cx_ideal, [anc,q[10]])
+    qc.append(cx_ideal, [4+7*2, 2+7*2])
+    qc.append(cx_ideal, [6+7*2, 0+7*2])
+    
+    qc.append(cx_ideal, [5+7*2, 3+7*2])
 
-    qc.measure(anc,7)
-    if pos == 0:
-        with qc.if_test((7, 1)):
-            qc.reset(anc)
-            qc.append(h_ideal,[anc])
-            qc.sdg(anc)
-            qc.append(cx_ideal, [anc,q[0]])
-            qc.append(cx_ideal, [anc,q[3]])
-            qc.append(cx_ideal, [anc,q[9]])
-            qc.append(cx_ideal, [anc,q[11]])
-            qc.measure(anc,7)
-            with qc.if_test((7 ,1)):
-                qc.z(q[0])
-                qc.z(q[3])
-                qc.z(q[9])
-                qc.z(q[11])
-    elif pos == 1:
-        with qc.if_test((7, 1)):
-            qc.reset(anc)
-            qc.append(h_ideal,[anc])
-            qc.sdg(anc)
-            qc.append(cx_ideal, [anc,q[0]])
-            qc.append(cx_ideal, [anc,q[1]])
-            qc.append(cx_ideal, [anc,q[9]])
-            qc.append(cx_ideal, [anc,q[10]])
-            qc.measure(anc,7)
-            with qc.if_test((7, 1)):
-                qc.z(q[0])
-                qc.z(q[1])
-                qc.z(q[9])
-                qc.z(q[10])
+    qc.append(cx_ideal, [5+7*2, 2+7*2])
+
+    qc.append(cx_ideal, [4+7*2, 0+7*2])
+    qc.append(cx_ideal, [6+7*2, 1+7*2])
+
+    qc.append(cx_ideal, [2+7*2, 0+7*2])
+
+    qc.append(cx_ideal, [5+7*2, 1+7*2])
+
+    qc.append(cx_ideal, [2+7*2, 1+7*2])
+    qc.append(cx_ideal, [4+7*2, 3+7*2])
+    qc.append(cx_ideal, [6+7*2, 3+7*2])
+    #################################Controlled Hadamards##########################################
+    qc.reset(ancc)
+    qc.h(ancc)
+    for i in range(7):
+        #qc.ch(anc-1,6-i+2*7)
+        qc.ry(-np.pi/4,6-i+2*7)
+        qc.cz(ancc,6-i+2*7)
+        qc.ry(np.pi/4,6-i+2*7)
+    qc.h(ancc)
+    qc.measure(ancc, state_inj[0])
+    ########################Controlled-Y Gate####################################################
+    adj_S_L(qc, pos)
+    for i in range(7):
+        qc.cx(i+7*2,i+7*pos)
+    S_L(qc, pos)
+    # read = ClassicalRegister(7)
+    # qc.add_register(read)
+    qc.reset(anc-1)
+    #############################Measure logical state for state injection#############################
+    adj_S_L(qc, pos=2)
+    H_L(qc, pos=2)
+    for i in range(7):
+        qc.cx(i+2*7, anc-1)
+    qc.measure(anc-1,cbits[2])
+    #################################Apply conditioned Ry(-pi/2) onto the Target###########################
+    for i in range(3):
+        with qc.if_test((cbits[2],0)):
+            qc.x(i+7*pos)
+    for i in range(7):
+        with qc.if_test((cbits[2],0)):
+            qc.h(i+7*pos)
 
 circ = QuantumCircuit(1)
 circ.rz(np.pi/8, 0)
@@ -291,668 +715,393 @@ approx = generate_basic_approximations(basis, depth=3)
 skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
 rootT = skd(circ)
 
-def root_T_L(qc: QuantumCircuit, q: list, pos: int, m: list, tracker):
+def root_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False, ecc = False):
     instruction = rootT.data
+    #counter = 0
     for i in instruction:
+        #if counter%2 == 0:
+            # if err:
+            #     qec_ft(qc, qecc=qecc, pos=pos)
         if i.name == "t":
-            T_L(qc, q, pos=pos)
+            T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
+            if err:
+                qec_ft(qc, qecc=qecc, pos=pos)
+            #counter += 1
         if i.name == "tdg":
-            adj_T_L(qc, q, pos=pos)
+            adj_T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
+            if err:
+                qec_ft(qc, qecc=qecc, pos=pos)
+            #counter += 1
         if i.name == "h":
-            H_L(qc, q, pos=pos)
+            H_L(qc, pos=pos)
 
 circ = QuantumCircuit(1)
 circ.rz(-np.pi/8, 0)
 basis = ["t", "tdg", "z", "h"]
 approx = generate_basic_approximations(basis, depth=3)
 skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
-rootadjT = skd(circ)
+adj_rootT = skd(circ)
 
-def adj_root_T_L(qc: QuantumCircuit, q: list, pos: int, m:list, tracker):
-    instruction = rootadjT.data
+def adj_root_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err=False, ecc = False):
+    instruction = adj_rootT.data
+    #counter = 0
     for i in instruction:
+        #if counter%2 == 0:
+            # if err:
+            #     qec_ft(qc, qecc=qecc, pos=pos)
         if i.name == "t":
-            T_L(qc, q, pos=pos)
+            T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
+            if err:
+                qec_ft(qc, qecc=qecc, pos=pos)
+            #counter += 1
         if i.name == "tdg":
-            adj_T_L(qc, q, pos=pos)
+            adj_T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
+            if err:
+                qec_ft(qc, qecc=qecc, pos=pos)
+            #counter += 1
         if i.name == "h":
-            H_L(qc, q, pos=pos)
+            H_L(qc, pos=pos)
 
-def U2(qc: QuantumCircuit, q: list, pos: int):
+def CT_L(qc: QuantumCircuit, cbits, qecc, err=False, ecc = False):
+    if err:
+        qec_ft(qc, qecc, 0), qec_ft(qc, qecc, 1)
+    root_T_L(qc, cbits, 0, qecc = qecc, err=err, ecc=ecc)
+    root_T_L(qc, cbits, 1, qecc = qecc, err=err, ecc=ecc)
+    CNOT_L(qc, 0)
+    if err:
+        qec_ft(qc, qecc, 1)
+    adj_root_T_L(qc, cbits, 1, qecc = qecc, err=err, ecc=ecc)
+    CNOT_L(qc, 0)
+
+def U2(qc: QuantumCircuit, pos: int, qecc, err=False):
     gate = ['s', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'sdg', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 's', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't']
     for i in gate:
         if i == "t":
-            T_L(qc, q, pos=pos)
+            T_L(qc, pos=pos)
+            if err:
+                qec_ft(qc, qecc, pos=pos)
         if i == "tdg":
-            adj_T_L(qc, q, pos=pos)
+            adj_T_L(qc, pos=pos)
+            if err:
+                qec_ft(qc, qecc, pos=pos)
         if i == "h":
-            H_L(qc, q, pos=pos)
+            H_L(qc, pos=pos)
 
-def adjU2(qc: QuantumCircuit, q: list, pos: int):
+def adjU2(qc: QuantumCircuit, pos: int, qecc, err=False):
     gate = ['s', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'sdg', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 's', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't']
     gate.reverse()
     for i in gate:
         if i == "tdg":
-            T_L(qc, q, pos=pos)
+            T_L(qc, pos=pos)
+            if err:
+                qec_ft(qc, qecc, pos=pos)
         if i == "t":
-            adj_T_L(qc, q, pos=pos)
+            adj_T_L(qc, pos=pos)
+            if err:
+                qec_ft(qc, qecc, pos=pos)
         if i == "h":
-            H_L(qc, q, pos=pos)
+            H_L(qc, pos=pos)
 
-def CU_L(qc: QuantumCircuit, q: list, n: list, tracker, err = False):
-    if err:
-        qec_ft(qc, q, tracker)
-    U2(qc, q, 0)
-    if err:
-        qec_ft(qc, q, tracker)
-    U2(qc, q, 1)
-    CNOT_L(qc, q, 0)
-    if err:
-        qec_ft(qc, q, tracker)
-    adjU2(qc, q, 1)
-    CNOT_L(qc, q, 0)
+def CU_L(qc: QuantumCircuit, qecc, err = False):
+    U2(qc, pos=0, qecc=qecc, err=err)
+    U2(qc, pos=1, qecc=qecc, err=err)
+    CNOT_L(qc, 0)
+    adjU2(qc, pos=1, qecc=qecc, err=err)
+    CNOT_L(qc, 0)
 
-def CT_L(qc: QuantumCircuit, q: list, n: list, tracker, err = False):
-    # if err:
-    #     qec_ft(qc, q, tracker)
-    root_T_L(qc, q, 0, n, tracker)
-    if err:
-        qec_ft(qc, q, tracker)
-    root_T_L(qc, q, 1, n, tracker)
-    CNOT_L(qc, q, 0)
-    # if err:
-    #     qec_ft(qc, q, tracker)
-    adj_root_T_L(qc, q, 1, n, tracker)
-    CNOT_L(qc, q, 0)
+def CS_L(qc: QuantumCircuit, control: int, target: int):
+    T_L(qc, 0)
+    T_L(qc, 1)
+    CNOT_L(qc, control=control)
+    adj_T_L(qc, pos = target)
+    CNOT_L(qc, control=control)
 
-def CS_L(qc: QuantumCircuit, q: list):
-    T_L(qc, q, 0)
-    T_L(qc, q, 1)
-    CNOT_L(qc, q, 0)
-    adj_T_L(qc, q, 1)
-    CNOT_L(qc, q, 0)
-
-def sortout(c_register: list, tracker):
-    cbits = len(c_register[0])
-    z_ref = ["00000","11100","00100","10100","01100","01010","00010","11010","10010","10001","00001","01001","11001"]
-    x_ref = ["00000","11100","10100","00100","01100","01010","11010","00010","10010","10001","01001","00001","11001"]
-    
-    ref = []
-    for i in z_ref:
-        for j in x_ref:
-            ref.append(i+j)
-
-    check = [i[12:cbits-7] for i in c_register]
-    
-    done = 0
-    brain = []
-    for i in tracker[0]:
-        if i == "z":
-            if done == 0:
-                hmm = [j[-5:] for j in check]
-            else:
-                hmm = [j[-done-5:-done] for j in check]
-            done += 5
-            for j in range(len(hmm)):
-                for k in z_ref:
-                    if hmm[j] == k:
-                        hmm[j] = 1
-            for j in range(len(hmm)):
-                if hmm[j] != 1:
-                    brain.append(j)
-        if i == "q":
-            if done == 0:
-                hmm = [j[-10:] for j in check]                                      #HIER STIMMT WAS NET, FIXEN!!!
-            else:
-                hmm = [j[-done-10:-done] for j in check]                            
-            done += 10
-            for j in range(len(hmm)):
-                for k in ref:
-                    if hmm[j] == k:
-                        hmm[j] = 1
-            for j in range(len(hmm)):
-                if hmm[j] != 1:
-                    brain.append(j)
-    return brain
-
-def readout(qc: QuantumCircuit, shots: int, q: list, noise = 0):
-    read = ClassicalRegister(12)
-    qc.add_register(read)
-
-    for i in range(12):
-        qc.id(q[i])
-        qc.measure(q[i],read[11-i])
-
-    cbits = qc.num_clbits
-
+def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     p = noise
     p_error = pauli_error([["X",p/2],["I",1-p],["Z",p/2]])
     p_error_2 = pauli_error([["XI",p/4],["IX",p/4],["II",1-p],["ZI",p/4],["IZ",p/4]])
 
     noise_model = NoiseModel()
-    noise_model.add_all_qubit_quantum_error(p_error, ['x', "z", 'h', "id"])  # Apply to single-qubit gates
-    noise_model.add_all_qubit_quantum_error(p_error_2, ['cx'])  # Apply to 2-qubit gates
+    noise_model.add_all_qubit_quantum_error(p_error, ['x', "z", 'h', "s", "sdg", "id", "ry"])  # Apply to single-qubit gates
+    noise_model.add_all_qubit_quantum_error(p_error_2, ['cx',"cz"])  # Apply to 2-qubit gates
+
+    read = ClassicalRegister(7)
+    qc.add_register(read)
+
+    for i in range(7):
+        qc.id(i+7*pos)
+        qc.measure(i+7*pos,read[6-i])
 
     sim = AerSimulator()
-    job = sim.run(qc, shots=shots, noise_model = noise_model)
+    
+    job = sim.run(qc, shots=shots, noise_model=noise_model)
+
     result = job.result()
     counts = result.get_counts()
 
-    return counts, cbits
-
-def code_ft():                                 
-    qr = QuantumRegister(15,"q")
-    cbits = ClassicalRegister(7,"c")             #7(Preselection) + 1 als Zwischenspeicher für magic states = 8 zu Beginn
-    qc = QuantumCircuit(qr, cbits)
-
-    q = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
-
-    for i in range(15):
-        qc.id(i)
-
-    qc.h(0)
-    qc.h(1)
-    qc.h(2)
-    qc.h(7)
-    qc.h(11)
-    qc.h(12)
-
-    qc.cx(12,3)
-    qc.cx(7,13)
-    qc.cx(11,14)
-
-
-    qc.cx(0,3)
-    qc.cx(1,3)
-    qc.cx(2,3)
-
-    qc.cx(7,4)
-    qc.cx(7,5)
-    qc.cx(7,6)
-
-    qc.cx(11,8)
-    qc.cx(11,9)
-    qc.cx(11,10)
-
-    qc.cx(12,3)
-    qc.cx(7,13)
-    qc.cx(11,14)
-
-    qc.h(12)
-    qc.id(12), qc.measure(12,0)
-    qc.id(13), qc.measure(13,1)
-    qc.id(14), qc.measure(14,2)
-
-    qc.reset(12), qc.id(12)
-    qc.reset(13), qc.id(13)
-    qc.reset(14)
-    ####################################################
-    for i in range(8):
-        qc.cx(i,i+4)
-    ####################################################
-    qc.h(12)
-
-    qc.cx(12,4)
-    qc.cx(7,13)
-    qc.cx(12,7)
-    qc.cx(4,13)
-    qc.cx(12,5)
-    qc.cx(6,13)
-    qc.cx(12,6)
-    qc.cx(5,13)
-
-    qc.h(12)
-    qc.id(12), qc.measure(12,3)
-    qc.id(13), qc.measure(13,4)
-
-    qc.reset(12), qc.id(12)
-    qc.reset(13), qc.id(13)
-    
-    ####################################################
-    qc.h(12)
-
-    qc.cx(12,13)
-    qc.cx(8,13)
-    qc.cx(10,12)
-    qc.cx(9,12)
-    qc.cx(11,13)
-    qc.cx(12,13)
-
-    qc.h(12)
-
-    qc.id(12), qc.measure(12,5)
-    qc.id(13), qc.measure(13,6)
-
-    qc.reset(12)
-    qc.reset(13)
-
-    q[5],q[7] = q[7],q[5]
-    q[6],q[7] = q[7],q[6]
-
-    q[9],q[10] = q[10],q[9]
-    q[10],q[11] = q[11],q[10]
-
-    tracker = [""]
-
-    ram = ClassicalRegister(1)
-    qc.add_register(ram)
-    
-    return qc, q, tracker
-
-def qec_ft(qc: QuantumCircuit, q:list, tracker):
-    anc = qc.num_qubits - 1
-    ancc = anc - 1
-    qc.reset(anc)
-
-    ec = ClassicalRegister(10)
-    qc.add_register(ec)
-    tracker[0] += "q"
-    flag = ClassicalRegister(10)
-    qc.add_register(flag)
-    tracker[0] += "f"
-
-    for k in range(1):
-        #S2 Stabilizers
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.h(ancc), qc.cx(ancc, anc)
-        qc.cx(q[0], anc)
-        qc.cx(q[1], anc)
-        qc.cx(ancc, anc)
-        qc.cx(q[2], anc)
-        qc.cx(q[3], anc)
-        qc.h(ancc), qc.id(anc), qc.id(ancc)
-        qc.measure(anc, ec[0]), qc.measure(ancc, flag[0])
-
-        #S4 Stabilizer
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.h(ancc), qc.cx(ancc, anc)
-        qc.cx(q[4], anc)
-        qc.cx(q[5], anc)
-        qc.cx(ancc, anc)
-        qc.cx(q[6], anc)
-        qc.cx(q[7], anc)
-        qc.h(ancc), qc.id(anc), qc.id(ancc)
-        qc.measure(anc, ec[1]), qc.measure(ancc, flag[0])
-
-        #S6 Stabilizer
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.h(ancc), qc.cx(ancc, anc)
-        qc.cx(q[8], anc)
-        qc.cx(q[9], anc)
-        qc.cx(ancc, anc)
-        qc.cx(q[10], anc)
-        qc.cx(q[11], anc)
-        qc.h(ancc), qc.id(anc), qc.id(ancc)
-        qc.measure(anc, ec[2]), qc.measure(ancc, flag[0])
-
-        #S9 Stabilizer
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.h(ancc), qc.cx(ancc, anc)
-        qc.cx(q[0],anc)
-        qc.cx(q[2],anc)
-        qc.cx(q[6],anc)
-        qc.cx(q[7],anc)
-        qc.cx(ancc, anc)
-        qc.cx(q[8],anc)
-        qc.cx(q[11],anc)
-        qc.h(ancc), qc.id(anc), qc.id(ancc)
-        qc.measure(anc, ec[3]), qc.measure(ancc, flag[0])
-
-        #S10 Stabilizer
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.h(ancc), qc.cx(ancc, anc)
-        qc.cx(q[0],anc)
-        qc.cx(q[3],anc)
-        qc.cx(q[4],anc)
-        qc.cx(q[6],anc)
-        qc.cx(ancc, anc)
-        qc.cx(q[10],anc)
-        qc.cx(q[11],anc)
-        qc.h(ancc), qc.id(anc), qc.id(ancc)
-        qc.measure(anc, ec[4]), qc.measure(ancc, flag[0])
-
-        with qc.if_test((ec[0],1)):            #X0
-            with qc.if_test((ec[3],1)):
-                with qc.if_test((ec[4],1)):
-                    qc.x(q[0])
-
-        with qc.if_test((ec[0],1)):            #X1
-            with qc.if_test((ec[3],0)):
-                with qc.if_test((ec[4],0)):
-                    qc.x(q[1])
-
-        with qc.if_test((ec[0],1)):            #X2
-            with qc.if_test((ec[3],1)):
-                with qc.if_test((ec[4],0)):
-                    qc.x(q[2])
-
-        with qc.if_test((ec[0],1)):            #X3
-            with qc.if_test((ec[3],0)):
-                with qc.if_test((ec[4],1)):
-                    qc.x(q[3])
-
-        with qc.if_test((ec[1],1)):            #X4
-            with qc.if_test((ec[3],0)):
-                with qc.if_test((ec[4],1)):
-                    qc.x(q[4])
-
-        with qc.if_test((ec[1],1)):            #X5
-            with qc.if_test((ec[3],0)):
-                with qc.if_test((ec[4],0)):
-                    qc.x(q[5])
-
-        with qc.if_test((ec[1],1)):            #X6
-            with qc.if_test((ec[3],1)):
-                with qc.if_test((ec[4],1)):
-                    qc.x(q[6])
-
-        with qc.if_test((ec[1],1)):            #X7
-            with qc.if_test((ec[3],1)):
-                with qc.if_test((ec[4],0)):
-                    qc.x(q[7])
-
-        with qc.if_test((ec[2],1)):            #X8
-            with qc.if_test((ec[3],1)):
-                with qc.if_test((ec[4],0)):
-                    qc.x(q[8])
-        
-        with qc.if_test((ec[2],1)):            #X9
-            with qc.if_test((ec[3],0)):
-                with qc.if_test((ec[4],0)):
-                    qc.x(q[9])
-        
-        with qc.if_test((ec[2],1)):            #X10
-            with qc.if_test((ec[3],0)):
-                with qc.if_test((ec[4],1)):
-                    qc.x(q[10])
-
-        with qc.if_test((ec[2],1)):            #X11
-            with qc.if_test((ec[3],1)):
-                with qc.if_test((ec[4],1)):
-                    qc.x(q[11])
-
-    ###################Phaseflip Error Stabilizers############################
-    for k in range(1):
-        #S1 Stabilizers
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.h(anc), qc.cx(anc, ancc)
-        qc.cx(anc, q[0])
-        qc.cx(anc, q[1])
-        qc.cx(anc, ancc)
-        qc.cx(anc, q[2])
-        qc.cx(anc, q[3])
-        qc.h(anc)
-        qc.id(anc), qc.id(ancc)
-        qc.measure(anc, ec[5]), qc.measure(ancc, flag[5])
-
-        #S3 Stabilizer
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.h(anc), qc.cx(anc, ancc)
-        qc.cx(anc, q[4])
-        qc.cx(anc, q[5])
-        qc.cx(anc, ancc)
-        qc.cx(anc, q[6])
-        qc.cx(anc, q[7])
-        qc.h(anc)
-        qc.id(anc), qc.id(ancc)
-        qc.measure(anc, ec[6]), qc.measure(ancc, flag[6])
-
-        #S5 Stabilizer
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.h(anc), qc.cx(anc, ancc)
-        qc.cx(anc, q[8])
-        qc.cx(anc, q[9])
-        qc.cx(anc, ancc)
-        qc.cx(anc, q[10])
-        qc.cx(anc, q[11])
-        qc.h(anc)
-        qc.id(anc), qc.id(ancc)
-        qc.measure(anc, ec[7]), qc.measure(ancc, flag[7])
-
-        #S7 Stabilizer
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.h(anc), qc.cx(anc, ancc)
-        qc.cx(anc, q[0])
-        qc.cx(anc, q[1])
-        qc.cx(anc, q[5])
-        qc.cx(anc, q[7])
-        qc.cx(anc, ancc)
-        qc.cx(anc, q[8])
-        qc.cx(anc, q[11])
-        qc.h(anc)
-        qc.id(anc), qc.id(ancc)
-        qc.measure(anc, ec[8]), qc.measure(ancc, flag[8])
-
-        #S8 Stabilizer
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.h(anc), qc.cx(anc, ancc)
-        qc.cx(anc, q[0])
-        qc.cx(anc, q[3])
-        qc.cx(anc, q[4])
-        qc.cx(anc, q[5])
-        qc.cx(anc, ancc)
-        qc.cx(anc, q[9])
-        qc.cx(anc, q[11])
-        qc.h(anc)
-        qc.id(anc), qc.id(ancc)
-        qc.measure(anc, ec[9]), qc.measure(ancc, flag[9])
-
-        with qc.if_test((ec[5],1)):            #Z0
-            with qc.if_test((ec[8],1)):
-                with qc.if_test((ec[9],1)):
-                    qc.z(q[0])
-
-        with qc.if_test((ec[5],1)):            #Z1
-            with qc.if_test((ec[8],1)):
-                with qc.if_test((ec[9],0)):
-                    qc.z(q[1])
-
-        with qc.if_test((ec[5],1)):            #Z2
-            with qc.if_test((ec[8],0)):
-                with qc.if_test((ec[9],0)):
-                    qc.z(q[2])
-
-        with qc.if_test((ec[5],1)):            #Z3
-            with qc.if_test((ec[8],0)):
-                with qc.if_test((ec[9],1)):
-                    qc.z(q[3])
-
-        with qc.if_test((ec[6],1)):            #Z4
-            with qc.if_test((ec[8],0)):
-                with qc.if_test((ec[9],1)):
-                    qc.z(q[4])
-
-        with qc.if_test((ec[6],1)):            #Z5
-            with qc.if_test((ec[8],1)):
-                with qc.if_test((ec[9],1)):
-                    qc.z(q[5])
-
-        with qc.if_test((ec[6],1)):            #Z6
-            with qc.if_test((ec[8],0)):
-                with qc.if_test((ec[9],0)):
-                    qc.z(q[6])
-
-        with qc.if_test((ec[6],1)):            #Z7
-            with qc.if_test((ec[8],1)):
-                with qc.if_test((ec[9],0)):
-                    qc.z(q[7])
-
-        with qc.if_test((ec[7],1)):            #Z8
-            with qc.if_test((ec[8],1)):
-                with qc.if_test((ec[9],0)):
-                    qc.z(q[8])
-        
-        with qc.if_test((ec[7],1)):            #Z9
-            with qc.if_test((ec[8],0)):
-                with qc.if_test((ec[9],1)):
-                    qc.z(q[9])
-        
-        with qc.if_test((ec[7],1)):            #Z10
-            with qc.if_test((ec[8],0)):
-                with qc.if_test((ec[9],0)):
-                    qc.z(q[10])
-
-        with qc.if_test((ec[7],1)):            #Z11
-            with qc.if_test((ec[8],1)):
-                with qc.if_test((ec[9],1)):
-                    qc.z(q[11])
-
-def fullpp_ft(counts: dict, shots: int, cbits: int, track, two = True):
-    nn, ne, en, ee = ["0000","1111"], ["0011","1100"], ["0101","1010"], ["0110","1001"]
-    zerozero, zeroone, onezero, oneone = [], [], [], []
-
-    for i in range(1):
-        idk(zerozero, nn, nn, nn)
-        idk(zerozero, ne, en, ee)
-        idk(zerozero, en, ee, ne)
-        idk(zerozero, ee, ne, en)
-        idk(zeroone, en, nn, ee)
-        idk(zeroone, ee, en, nn)
-        idk(zeroone, nn, ee, en)
-        idk(zeroone, ne, ne, ne)
-        idk(onezero, ee, nn, ne)
-        idk(onezero, en, en, en)
-        idk(onezero, ne, ee, nn)
-        idk(onezero, nn, ne, ee)
-        idk(oneone, ne, nn, en)
-        idk(oneone, nn, en, ne)
-        idk(oneone, ee, ee, ee)
-        idk(oneone, en, ne, nn)
-
     bitstring = list(counts.keys())
+
     hmm = list(counts.values())
 
-    bitstring = [i.replace(" ","") for i in bitstring]
-
-    pre, preselected = [i[cbits-7:] for i in bitstring], 0
-    bits = [i[:12] for i in bitstring]
-
-    qf = [i[12:cbits-8] for i in bitstring]
-
-    length = int(len(qf[0])/10)
-    flags = []
-
-    for i in range(len(qf)):
-        flags.append("")
-        for j in range(length):
-            if j%2 == 0:
-                flags[i] += qf[i][j*10:j*10+10]
+    allcbits = len(bitstring[0])                #in allcbits sind die Leerzeichen noch drinnen!!!!
+    pre, preselected = [i[allcbits-2:] for i in bitstring], 0
+    bits = [i[:7] for i in bitstring]
+    postprocess = [i[7:allcbits-10] for i in bitstring]
 
     for i in range(len(pre)):
         if pre[i].count("1") != 0:
             bits[i] = "pre"
             preselected += hmm[i]
 
-    for i in range(len(flags)):
-        if flags[i].count("1") != 0:
-            if bits[i] != "pre":
-                bits[i] = "post"
-    
+    test_0 = ["0000000","1010101","0110011","1100110","0001111","1011010","0111100","1101001"]
+    test_1 = ["1111111","0101010","1001100","0011001","1110000","0100101","1000011","0010110"]
+
     for i in range(len(bits)):
-        for j in zerozero:
+        for j in test_0:
             if j == bits[i]:
                 bits[i] = 0
                 break
         if bits[i] != 0:
-            for j in zeroone:
+            for j in test_1:
                 if j == bits[i]:
                     bits[i] = 1
                     break
-        if bits[i] != 1 and bits[i] != 0:
-            for j in onezero:
-                if j == bits[i]:
-                    bits[i] = 2
-                    break
-        if bits[i] != 2 and bits[i] != 1 and bits[i] != 0:
-            for j in oneone:
-                if j == bits[i]:
-                    bits[i] = 3
-                    break
-        if bits[i] != 0 and bits[i] != 1 and bits[i] != 2 and bits[i] != 3 and bits[i] != "pre":
+        if bits[i] != 1 and bits[i] != 0 and bits[i] != "pre":
             bits[i] = "post"
 
-    if two:
-        twoqubiterrors = sortout(bitstring, tracker=track)
-        for i in twoqubiterrors:
-            if bits[i] != "post" and bits[i] != "pre":
-                bits[i] = "twoqubiterr"
+    for i in range(len(postprocess)):
+        if postprocess[i].count("1") != 0:
+            if bits[i] != "pre" and bits[i] != "post":
+                bits[i] = "post"
 
-    nullnull = 0
-    nulleins = 0
-    einsnull = 0
-    einseins = 0
+    #print(bits)
+    ones = 0
+    zeros = 0
     post = 0
-    twoqubiterr = 0
+    #magic = 0
 
     for i in range(len(bits)):
         if bits[i] == 0:
-            nullnull += hmm[i]
+            zeros += hmm[i]
         if bits[i] == 1:
-            nulleins += hmm[i]
-        if bits[i] == 2:
-            einsnull += hmm[i]
-        if bits[i] == 3:
-            einseins += hmm[i]
+            ones += hmm[i]
         if bits[i] == "post":
             post += hmm[i]
-        if bits[i] == "twoqubiterr":
-            twoqubiterr += hmm[i]
-
-
-    nullnull = (nullnull/shots)
-    nulleins = (nulleins/shots)
-    einsnull = (einsnull/shots)
-    einseins = (einseins/shots)
-    preselected = (preselected/shots)
+        # if bits[i] == "magic":
+        #     magic += hmm[i]
+    
+    ones = (ones/shots)
+    zeros = (zeros/shots)
     post = (post/shots)
-    twoqubiterr = (twoqubiterr/shots)
+    preselected = (preselected/shots)
+    #magic = (magic/shots)
 
-    return [preselected, twoqubiterr, post, nullnull, nulleins, einsnull, einseins]
+    # print("0: ", zeros, "%")
+    # print("1: ", ones, "%")
+    # print("Preselection discarded: ", (preselected/shots)*100, "%")
+    # print("Postselection discarded: ", err - (preselected/shots)*100, "%")
+    return zeros, ones, preselected, post#,magic
+
+def qec_ft(qc: QuantumCircuit, qecc, pos: int):
+    flags = ClassicalRegister(6)
+    qc.add_register(flags)
+    anc = qc.num_qubits - 1
+    ancc = anc - 1
+    qc.reset(anc), qc.reset(ancc)
+    ##################################Z-Stabilizers##########################################
+    qc.h(ancc)
+    qc.cx(0+7*pos, anc)
+    qc.cx(ancc,anc)
+    qc.cx(2+7*pos, anc)
+    qc.cx(4+7*pos, anc)
+    qc.cx(ancc,anc)
+    qc.cx(6+7*pos, anc)
+
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, qecc[2]), qc.measure(ancc, flags[0])
+    qc.reset(anc), qc.reset(ancc)
+    qc.id(anc), qc.id(ancc)
+
+    qc.h(ancc)
+    qc.cx(1+7*pos, anc)
+    qc.cx(ancc, anc)
+    qc.cx(2+7*pos, anc)
+    qc.cx(5+7*pos, anc)
+    qc.cx(ancc, anc)
+    qc.cx(6+7*pos, anc)
+
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, qecc[1]), qc.measure(ancc, flags[1])
+    qc.reset(anc), qc.reset(ancc)
+    qc.id(anc), qc.id(ancc)
+
+    qc.h(ancc)
+    qc.cx(3+7*pos, anc)
+    qc.cx(ancc, anc)
+    qc.cx(4+7*pos, anc)
+    qc.cx(5+7*pos, anc)
+    qc.cx(ancc, anc)
+    qc.cx(6+7*pos, anc)
+
+    qc.id(anc), qc.h(ancc), qc.id(ancc)
+    qc.measure(anc, qecc[0]), qc.measure(ancc, flags[2])
+    qc.reset(anc), qc.reset(ancc)
+    qc.id(anc), qc.id(ancc)
+    ##################################X-Stabilizers##############################################
+    qc.h(anc)
+    qc.cx(anc, 0+7*pos)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 2+7*pos)
+    qc.cx(anc, 4+7*pos)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 6+7*pos)
+    qc.h(anc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, qecc[5]), qc.measure(ancc, flags[3])
+    qc.reset(anc), qc.reset(ancc)
+    qc.id(anc), qc.id(ancc)
+
+    qc.h(anc)
+    qc.cx(anc, 1+7*pos)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 2+7*pos)
+    qc.cx(anc, 5+7*pos)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 6+7*pos)
+    qc.h(anc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, qecc[4]), qc.measure(ancc, flags[4])
+    qc.reset(anc), qc.reset(ancc)
+    qc.id(anc), qc.id(ancc)
+
+    qc.h(anc)
+    qc.cx(anc, 3+7*pos)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 4+7*pos)
+    qc.cx(anc, 5+7*pos)
+    qc.cx(anc, ancc)
+    qc.cx(anc, 6+7*pos)
+    qc.h(anc)
+
+    qc.id(anc), qc.id(ancc)
+    qc.measure(anc, qecc[3]), qc.measure(ancc, flags[5])
+    qc.reset(anc), qc.reset(ancc)
+    ##################################Bitflip Error correction##############################################
+    
+    with qc.if_test((qecc[0],0)):             #qbit 0
+        with qc.if_test((qecc[1],0)):
+            with qc.if_test((qecc[2],1)):
+                qc.x(0+7*pos)
+
+    with qc.if_test((qecc[0],0)):             #qbit 1
+        with qc.if_test((qecc[1],1)):
+            with qc.if_test((qecc[2],0)):
+                qc.x(1+7*pos)
+    
+    with qc.if_test((qecc[0],0)):             #qbit 2
+        with qc.if_test((qecc[1],1)):
+            with qc.if_test((qecc[2],1)):
+                qc.x(2+7*pos)
+    
+    with qc.if_test((qecc[0],1)):             #qbit 3
+        with qc.if_test((qecc[1],0)):
+            with qc.if_test((qecc[2],0)):
+                qc.x(3+7*pos)
+    
+    with qc.if_test((qecc[0],1)):             #qbit 4
+        with qc.if_test((qecc[1],0)):
+            with qc.if_test((qecc[2],1)):
+                qc.x(4+7*pos)
+    
+    with qc.if_test((qecc[0],1)):             #qbit 5
+        with qc.if_test((qecc[1],1)):
+            with qc.if_test((qecc[2],0)):
+                qc.x(5+7*pos)
+    
+    with qc.if_test((qecc[0],1)):             #qbit 6
+        with qc.if_test((qecc[1],1)):
+            with qc.if_test((qecc[2],1)):
+                qc.x(6+7*pos)
+
+    ##################################Phaseflip Error correction##############################################
+    
+    with qc.if_test((qecc[3],0)):             #qbit 0
+        with qc.if_test((qecc[4],0)):
+            with qc.if_test((qecc[5],1)):
+                qc.z(0+7*pos)
+
+    with qc.if_test((qecc[3],0)):             #qbit 1
+        with qc.if_test((qecc[4],1)):
+            with qc.if_test((qecc[5],0)):
+                qc.z(1+7*pos)
+    
+    with qc.if_test((qecc[3],0)):             #qbit 2
+        with qc.if_test((qecc[4],1)):
+            with qc.if_test((qecc[5],1)):
+                qc.z(2+7*pos)
+    
+    with qc.if_test((qecc[3],1)):             #qbit 3
+        with qc.if_test((qecc[4],0)):
+            with qc.if_test((qecc[5],0)):
+                qc.z(3+7*pos)
+    
+    with qc.if_test((qecc[3],1)):             #qbit 4
+        with qc.if_test((qecc[4],0)):
+            with qc.if_test((qecc[5],1)):
+                qc.z(4+7*pos)
+    
+    with qc.if_test((qecc[3],1)):             #qbit 5
+        with qc.if_test((qecc[4],1)):
+            with qc.if_test((qecc[5],0)):
+                qc.z(5+7*pos)
+    
+    with qc.if_test((qecc[3],1)):             #qbit 6
+        with qc.if_test((qecc[4],1)):
+            with qc.if_test((qecc[5],1)):
+                qc.z(6+7*pos)
 
 ################################################################################################################################################################
 def gen_data(name):
-    x = np.linspace(0,0.001,10)
-    shots = 100
-    pre, post, nn, ne, en, ee, pre2, two, post2, nn2, ne2, ee2, en2 = [],[],[],[],[],[],[],[],[],[],[],[],[]
+    x = np.linspace(0.00,0.001,3)
+    shots = 5
+    one, zero, one_QEC, zero_QEC, pre, post, pre_QEC, post_QEC = [],[],[],[],[],[],[],[]
     for i in x:
-        qc, q, tracker = code_ft()      #first iteration iQPE, with 0.3 angle, U2 eqauls 0.15 rotation
-        n = [0]
-        X_L(qc, q, 1)
-        H_L(qc, q, 0)
-        #############################
-        for j in range(4):
-            CU_L(qc, q, n, tracker, err=False)
-        ###############################
-        H_L(qc, q, 0)
-        counts, cbits = readout(qc, shots, q, noise=i)
-        result = fullpp_ft(counts, shots, cbits, tracker, True)
+        cbits = ClassicalRegister(3,"c")
+        qc = code_goto(cbits=cbits)
 
-        pre.append(result[0]), post.append(result[2]), nn.append(result[3]), ne.append(result[4]), en.append(result[5]), ee.append(result[6])
+        qecc = ClassicalRegister(6)
+        qc.add_register(qecc)
+
+        X_L(qc,1)
+        H_L(qc,0)
+
+        for j in range(4):
+            CU_L(qc, err=False)
+
+        H_L(qc,0)
+
+        zeros, ones, preselec, postselec = readout(qc, 0, shots, i)
+
+        pre.append(preselec), post.append(postselec), one.append(ones), zero.append(zeros)
         ###################################################################################################
-        qc, q, tracker = code_ft()      #first iteration iQPE, with 0.3 angle, U2 eqauls 0.15 rotation
-        n = [0]
-        X_L(qc, q, 1)
-        H_L(qc, q, 0)
-        #############################
-        for j in range(4):
-            CU_L(qc, q, n, tracker, err=True)
-        ###############################
-        H_L(qc, q, 0)
-        qec_ft(qc, q, tracker)
-        counts, cbits = readout(qc, shots, q, noise=i)
-        result = fullpp_ft(counts, shots, cbits, tracker, True)
-            
-        pre2.append(result[0]), two.append(result[1]), post2.append(result[2]), nn2.append(result[3]), ne2.append(result[4]), en2.append(result[5]), ee2.append(result[6])
+        cbits = ClassicalRegister(3,"c")
+        qc = code_goto(cbits=cbits)
 
-    data = np.array((x,pre,post,nn,ne,en,ee,pre2,two,post2,nn2,ne2,en2,ee2))
-    np.savetxt("FTCarbon_c{}.txt".format(name), data, delimiter=",")
+        qecc = ClassicalRegister(6)
+        qc.add_register(qecc)
+
+        X_L(qc,1)
+        H_L(qc,0)
+        qec_ft(qc, qecc, 0), qec_ft(qc, qecc, 1)
+        for j in range(4):
+            CU_L(qc, err=True)
+        H_L(qc,0)
+
+        zeros, ones, preselec, postselec = readout(qc, 0, shots, i)
+            
+        pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
+
+    data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
+    np.savetxt("FTSteane_a{}.txt".format(name), data, delimiter=",")

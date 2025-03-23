@@ -309,6 +309,43 @@ def CT_L(qc: QuantumCircuit, had = "00", qecc = False):
         adj_root_T_L(qc, had = True, pos=1)
         CNOT(qc, had = had, control=0)
 
+def U2(qc: QuantumCircuit, pos: int, had = False):
+    gate = ['s', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'sdg', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 's', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't']
+    for i in gate:
+        if i == "t":
+            T_L(qc, had=had, pos=pos)
+        if i == "tdg":
+            adj_T_L(qc, had=had, pos=pos)
+        if i == "h":
+            H_L(qc, pos=pos)
+            had = not had
+
+def adjU2(qc: QuantumCircuit, pos: int, had = False):
+    gate = ['s', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'sdg', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 's', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't']
+    gate.reverse()
+    for i in gate:
+        if i == "tdg":
+            T_L(qc, had=had, pos=pos)
+        if i == "t":
+            adj_T_L(qc, had=had, pos=pos)
+        if i == "h":
+            H_L(qc, pos=pos)
+            had = not had
+
+def CU_L(qc: QuantumCircuit, had = "10", err = False):
+    if had == "10":
+        U2(qc, had=True, pos=0)
+        if err:
+            qec(qc, had=True, pos=0)
+        U2(qc, had=False, pos=1)
+        if err:
+            qec(qc, had=False,pos=1)
+        CNOT(qc, 0)
+        adjU2(qc,  had=False, pos=1)
+        if err:
+            qec(qc,  had=False, pos=1)
+        CNOT(qc, 0)
+
 def CNOT(qc:QuantumCircuit, had = "00", control = 0):               #CNOT mit berücksichtigung der Rotation durch H-Gate
     if control == 0:
         if had == "10":
@@ -816,8 +853,8 @@ def qec(qc: QuantumCircuit, had = False, pos = 0):
 
 ################################################################################################################################################################
 def gen_data(name):
-    x = np.linspace(0,0.04,20)
-    shots = 200
+    x = np.linspace(0,0.001,5)
+    shots = 50
     one, zero, post, one_QEC, zero_QEC, post_QEC = [],[],[],[],[],[]
     for i in x:
         qc = rot_surf_code(2)
@@ -825,9 +862,9 @@ def gen_data(name):
         X_L(qc, False, 1)
         H_L(qc, pos=0)
         # ################################################
-        CT_L(qc, "10", qecc=True)
+        for j in range(4):
+            CU_L(qc, "10", err=True)
         # ################################################
-        adj_T_L(qc, True, 0)
         H_L(qc ,pos=0)
         qec(qc, False, 0)
 
@@ -841,9 +878,9 @@ def gen_data(name):
         X_L(qc, False, 1)
         H_L(qc, pos=0)
         # ################################################
-        CT_L(qc, "10", qecc=False)
+        for j in range(4):
+            CU_L(qc, "10", err=False)
         # ################################################
-        adj_T_L(qc, True, 0)
         H_L(qc ,pos=0)
 
         zeros, ones, err = readout(qc, had=2, pos=0, shots=shots, noise=i)
@@ -851,4 +888,4 @@ def gen_data(name):
         one.append(ones), zero.append(zeros), post.append(err)
 
     data = np.array((x,zero,one,post,zero_QEC,one_QEC,post_QEC))
-    np.savetxt("FTRotSurf_3rd_d{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTRotSurf_a{}.txt".format(name), data, delimiter=",")
