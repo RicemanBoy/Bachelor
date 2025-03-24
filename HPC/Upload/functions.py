@@ -126,7 +126,7 @@ def CZ_L(qc: QuantumCircuit, q:list):
     CNOT_L(qc, q, 1)
     H_L(qc, q, 0)
 
-def S_L(qc: QuantumCircuit, q: list, pos: int, m: list, tracker):
+def S_L(qc: QuantumCircuit, q: list, pos: int):
     anc = qc.num_qubits - 1
     qc.reset(anc)
     qc.append(h_ideal,[anc])
@@ -156,7 +156,7 @@ def S_L(qc: QuantumCircuit, q: list, pos: int, m: list, tracker):
             qc.z(q[1])
             qc.z(q[10])
 
-def adj_S_L(qc: QuantumCircuit, q: list, pos: int, m:list, tracker):
+def adj_S_L(qc: QuantumCircuit, q: list, pos: int):
     anc = qc.num_qubits - 1
     qc.reset(anc)
     qc.append(h_ideal,[anc])
