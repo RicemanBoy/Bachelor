@@ -9,7 +9,6 @@ from qiskit_aer.noise import (NoiseModel, pauli_error)
 from qiskit.circuit.library import UnitaryGate
 
 ################################################################################################################################################################
-#noisefree gates
 matrix_h = ([[2**(-0.5),2**(-0.5)],[2**(-0.5),-2**(-0.5)]])
 h_ideal = UnitaryGate(matrix_h)
 
@@ -21,7 +20,6 @@ x_ideal = UnitaryGate(matrix_x)
 
 matrix_z = ([[1,0],[0,-1]])
 z_ideal = UnitaryGate(matrix_z)
-
 
 def idk(new: list, a: list, b:list, c:list):
     for i in a:
@@ -286,16 +284,42 @@ def adj_T_L(qc: QuantumCircuit, q: list, pos: int):
                 qc.z(q[9])
                 qc.z(q[10])
 
-def convert(bin: str):                  #konvertiert den bitstring in decimal, e.g. 0110 = 0.375
-    k = list(bin)
-    a = [int(i) for i in k]
-    n = 0
-    for i in range(len(a)):
-        if a[i] == 1:
-            n += 1/2**(i+1)
-    return n
+circ = QuantumCircuit(1)
+circ.rz(np.pi/8, 0)
+basis = ["t", "tdg", "z", "h"]
+approx = generate_basic_approximations(basis, depth=3)
+skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
+rootT = skd(circ)
 
-def U2(qc: QuantumCircuit, q:list, pos: int, gate: list):
+def root_T_L(qc: QuantumCircuit, q: list, pos: int, m: list, tracker):
+    instruction = rootT.data
+    for i in instruction:
+        if i.name == "t":
+            T_L(qc, q, pos=pos)
+        if i.name == "tdg":
+            adj_T_L(qc, q, pos=pos)
+        if i.name == "h":
+            H_L(qc, q, pos=pos)
+
+circ = QuantumCircuit(1)
+circ.rz(-np.pi/8, 0)
+basis = ["t", "tdg", "z", "h"]
+approx = generate_basic_approximations(basis, depth=3)
+skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
+rootadjT = skd(circ)
+
+def adj_root_T_L(qc: QuantumCircuit, q: list, pos: int, m:list, tracker):
+    instruction = rootadjT.data
+    for i in instruction:
+        if i.name == "t":
+            T_L(qc, q, pos=pos)
+        if i.name == "tdg":
+            adj_T_L(qc, q, pos=pos)
+        if i.name == "h":
+            H_L(qc, q, pos=pos)
+
+def U2(qc: QuantumCircuit, q: list, pos: int):
+    gate = ['s', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'sdg', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 's', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't']
     for i in gate:
         if i == "s":
             S_L(qc, q, pos=pos)
@@ -308,80 +332,53 @@ def U2(qc: QuantumCircuit, q:list, pos: int, gate: list):
         if i == "h":
             H_L(qc, q, pos=pos)
 
-def CU_L(qc: QuantumCircuit, q:list, Ugates: list, adjUgates: list, tracker, err = False):
-    U2(qc, q, 0, Ugates)
+def adjU2(qc: QuantumCircuit, q: list, pos: int):
+    gate = ['s', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'sdg', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 's', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't']
+    gate.reverse()
+    for i in gate:
+        if i == "sdg":
+            S_L(qc, q, pos=pos)
+        if i == "s":
+            adj_S_L(qc, q, pos=pos)
+        if i == "tdg":
+            T_L(qc, q, pos=pos)
+        if i == "t":
+            adj_T_L(qc, q, pos=pos)
+        if i == "h":
+            H_L(qc, q, pos=pos)
+
+def CU_L(qc: QuantumCircuit, q: list, n: list, tracker, err = False):
     if err:
         qec_ft(qc, q, tracker)
-    U2(qc, q, 1, Ugates)
+    U2(qc, q, 0)
     if err:
         qec_ft(qc, q, tracker)
+    U2(qc, q, 1)
     CNOT_L(qc, q, 0)
-    U2(qc, q, 1, adjUgates)
     if err:
         qec_ft(qc, q, tracker)
+    adjU2(qc, q, 1)
     CNOT_L(qc, q, 0)
 
-def Leon(iter: int, n:int, noise: float, err = False, k = 1):       #each iteration own circuit
-    angle = np.linspace(0,1,n+2)
-    angle = np.delete(angle, [n+1])
-    angle = np.delete(angle, [0])
+def CT_L(qc: QuantumCircuit, q: list, n: list, tracker, err = False):
+    # if err:
+    #     qec_ft(qc, q, tracker)
+    root_T_L(qc, q, 0, n, tracker)
+    if err:
+        qec_ft(qc, q, tracker)
+    root_T_L(qc, q, 1, n, tracker)
+    CNOT_L(qc, q, 0)
+    # if err:
+    #     qec_ft(qc, q, tracker)
+    adj_root_T_L(qc, q, 1, n, tracker)
+    CNOT_L(qc, q, 0)
 
-    a, b = [], []
-    with open("unitary{}.txt".format(n), "r") as file:
-        for line in file:
-            a.append(list(map(str, line.strip().split(","))))
-    with open("adjunitary{}.txt".format(n), "r") as file:
-        for line in file:
-            b.append(list(map(str, line.strip().split(","))))
-    
-    y = 0
-    bruh1 = []
-    for m in range(k):
-        for o in range(n):
-            bitstring = ""
-            rots = []
-            for t in range(iter):
-                rots = [k*0.5 for k in rots]
-                while True:
-                    qc, q, tracker = code_ft() 
-
-                    X_L(qc, q, 1)
-                    H_L(qc, q, 0)
-                    #############################
-                    for j in range(2**(iter-t-1)):
-                        CU_L(qc, q, a[0], b[0], tracker, err=err)
-                    ###############################
-
-                    for l in rots:
-                        if l == 0.25:
-                            adj_S_L(qc, q, pos=0)
-                        if l == 0.125:
-                            adj_T_L(qc, q, pos=0)
-
-                    H_L(qc, q, 0)
-
-                    counts, cbits = readout(qc, 1, q, noise=noise)
-                    result = fullpp_ft(counts, 1, cbits, tracker, True)                     #[preselected, twoqubiterr, post, nullnull, nulleins, einsnull, einseins]
-                    if result[5] != 0 or result[6] != 0:
-                        bitstring += "1"
-                        rots.append(0.5)
-                        break
-                    if result[3] != 0 or result[4] != 0:
-                        bitstring += "0"
-                        break
-            bitstring = bitstring[::-1]
-            hmm = convert(bitstring)
-            diff = np.abs(hmm-angle[o])
-            y += diff
-            bruh1.append(diff)
-    y = y/(n*k)
-    arg = 0
-    for i in range(len(bruh1)):
-        arg += (y-bruh1[i])**2
-    sigma = ((1/(k*n))*arg)**0.5
-    sigma = sigma/((k*n)**0.5)
-
-    return y, sigma
+def CS_L(qc: QuantumCircuit, q: list):
+    T_L(qc, q, 0)
+    T_L(qc, q, 1)
+    CNOT_L(qc, q, 0)
+    adj_T_L(qc, q, 1)
+    CNOT_L(qc, q, 0)
 
 def sortout(c_register: list, tracker):
     cbits = len(c_register[0])
@@ -843,14 +840,10 @@ def fullpp_ft(counts: dict, shots: int, cbits: int, track, two = True):
     bitstring = list(counts.keys())
     hmm = list(counts.values())
 
-    #print(bitstring)
-
     bitstring = [i.replace(" ","") for i in bitstring]
 
     pre, preselected = [i[cbits-7:] for i in bitstring], 0
     bits = [i[:12] for i in bitstring]
-
-    #print(pre)
 
     qf = [i[12:cbits-8] for i in bitstring]
 
@@ -936,15 +929,37 @@ def fullpp_ft(counts: dict, shots: int, cbits: int, track, two = True):
 
 ################################################################################################################################################################
 def gen_data(name):
-    p = np.linspace(0,0.001,5)
-    y_all, y_all1 = [],[]
-    err, err1 = [], []
+    x = np.linspace(0,0.001,10)
+    shots = 100
+    pre, post, nn, ne, en, ee, pre2, two, post2, nn2, ne2, ee2, en2 = [],[],[],[],[],[],[],[],[],[],[],[],[]
+    for i in x:
+        qc, q, tracker = code_ft()      #first iteration iQPE, with 0.3 angle, U2 eqauls 0.15 rotation
+        n = [0]
+        X_L(qc, q, 1)
+        H_L(qc, q, 0)
+        #############################
+        for j in range(4):
+            CU_L(qc, q, n, tracker, err=False)
+        ###############################
+        H_L(qc, q, 0)
+        counts, cbits = readout(qc, shots, q, noise=i)
+        result = fullpp_ft(counts, shots, cbits, tracker, True)
 
-    for r in p:
-        ok, errr = Leon(3, 30, noise=r, err=False, k=1)
-        y_all.append(ok), err.append(errr)
-        ok1, errr1 = Leon(3, 30, noise=r, err=True, k=1)
-        y_all1.append(ok1), err1.append(errr1)
+        pre.append(result[0]), post.append(result[2]), nn.append(result[3]), ne.append(result[4]), en.append(result[5]), ee.append(result[6])
+        ###################################################################################################
+        qc, q, tracker = code_ft()      #first iteration iQPE, with 0.3 angle, U2 eqauls 0.15 rotation
+        n = [0]
+        X_L(qc, q, 1)
+        H_L(qc, q, 0)
+        #############################
+        for j in range(4):
+            CU_L(qc, q, n, tracker, err=True)
+        ###############################
+        H_L(qc, q, 0)
+        counts, cbits = readout(qc, shots, q, noise=i)
+        result = fullpp_ft(counts, shots, cbits, tracker, True)
+            
+        pre2.append(result[0]), two.append(result[1]), post2.append(result[2]), nn2.append(result[3]), ne2.append(result[4]), en2.append(result[5]), ee2.append(result[6])
 
-    data = np.array((p, y_all, y_all1, err, err1))
-    np.savetxt("CarbFinal_{}.txt".format(name), data, delimiter=",")
+    data = np.array((x,pre,post,nn,ne,en,ee,pre2,two,post2,nn2,ne2,en2,ee2))
+    np.savetxt("FTCarbon_e{}.txt".format(name), data, delimiter=",")
