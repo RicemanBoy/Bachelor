@@ -351,7 +351,7 @@ def Leon(iter: int, n:int, noise: float, err = False, k = 1):       #each iterat
                     H_L(qc, q, 0)
                     #############################
                     for j in range(2**(iter-t-1)):
-                        CU_L(qc, q, a[0], b[0], tracker, err=err)
+                        CU_L(qc, q, a[o], b[o], tracker, err=err)
                     ###############################
 
                     for l in rots:
@@ -940,15 +940,15 @@ def fullpp_ft(counts: dict, shots: int, cbits: int, track, two = True):
 
 ################################################################################################################################################################
 def gen_data(name):
-    p = np.linspace(0,0.001,5)
+    p = np.linspace(0,0.005,10)
     y_all, y_all1 = [],[]
     err, err1 = [], []
 
     for r in p:
-        ok, errr = Leon(3, 50, noise=r, err=False, k=3)
+        ok, errr = Leon(3, 15, noise=r, err=False, k=5)
         y_all.append(ok), err.append(errr)
-        ok1, errr1 = Leon(3, 50, noise=r, err=True, k=3)
+        ok1, errr1 = Leon(3, 15, noise=r, err=True, k=5)
         y_all1.append(ok1), err1.append(errr1)
 
     data = np.array((p, y_all, y_all1, err, err1))
-    np.savetxt("CarbFinal_f{}.txt".format(name), data, delimiter=",")
+    np.savetxt("CarbFinal_h{}.txt".format(name), data, delimiter=",")
