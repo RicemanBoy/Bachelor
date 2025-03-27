@@ -307,6 +307,8 @@ def U2(qc: QuantumCircuit, q:list, pos: int, gate: list):
             adj_T_L(qc, q, pos=pos)
         if i == "h":
             H_L(qc, q, pos=pos)
+        if i == "z":
+            Z_L(qc, q ,pos=pos)
 
 def CU_L(qc: QuantumCircuit, q:list, Ugates: list, adjUgates: list, tracker, err = False):
     U2(qc, q, 0, Ugates)
@@ -450,6 +452,8 @@ def readout(qc: QuantumCircuit, shots: int, q: list, noise = 0):
     counts = result.get_counts()
 
     return counts, cbits
+
+###################################################
 
 def code_ft():                                 
     qr = QuantumRegister(15,"q")
@@ -941,10 +945,10 @@ def gen_data(name):
     err, err1 = [], []
 
     for r in p:
-        ok, errr = Leon(3, 30, noise=r, err=False, k=3)
+        ok, errr = Leon(3, 50, noise=r, err=False, k=3)
         y_all.append(ok), err.append(errr)
-        ok1, errr1 = Leon(3, 30, noise=r, err=True, k=3)
+        ok1, errr1 = Leon(3, 50, noise=r, err=True, k=3)
         y_all1.append(ok1), err1.append(errr1)
 
     data = np.array((p, y_all, y_all1, err, err1))
-    np.savetxt("CarbFinal_b{}.txt".format(name), data, delimiter=",")
+    np.savetxt("CarbFinal_f{}.txt".format(name), data, delimiter=",")
