@@ -945,10 +945,10 @@ def gen_data(name):
     err, err1 = [], []
 
     for r in p:
-        ok, errr = Leon(3, 50, noise=r, err=False, k=5)
+        ok, errr = Leon(3, 15, noise=r, err=False, k=5)
         y_all.append(ok), err.append(errr)
-        ok1, errr1 = Leon(3, 50, noise=r, err=True, k=5)
+        ok1, errr1 = Leon(3, 15, noise=r, err=True, k=5)
         y_all1.append(ok1), err1.append(errr1)
 
     data = np.array((p, y_all, y_all1, err, err1))
-    np.savetxt("CarbFinal_i{}.txt".format(name), data, delimiter=",")
+    np.savetxt("CarbFinal_h{}.txt".format(name), data, delimiter=",")
