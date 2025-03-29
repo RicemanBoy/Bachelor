@@ -824,7 +824,7 @@ def qec(qc: QuantumCircuit, pos = 0):
 
 ################################################################################################################################################################
 def gen_data(name):
-    p = np.linspace(0,0.005,10)
+    p = np.linspace(0.005,0.01,5)
     y_all, y_all1 = [],[]
     err, err1 = [], []
 
@@ -835,4 +835,4 @@ def gen_data(name):
         y_all1.append(ok1), err1.append(errr1)
 
     data = np.array((p, y_all, y_all1, err, err1))
-    np.savetxt("RotSurfFinal_a{}.txt".format(name), data, delimiter=",")
+    np.savetxt("RotSurfFinal_a+{}.txt".format(name), data, delimiter=",")
