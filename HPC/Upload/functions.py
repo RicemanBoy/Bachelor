@@ -333,10 +333,10 @@ def Leon(iter: int, n:int, argh: float, err = False, k = 1):       #each iterati
     angle = np.delete(angle, [0])
 
     a, b = [], []
-    with open("Unitary/unitary{}.txt".format(n), "r") as file:
+    with open("unitary{}.txt".format(n), "r") as file:
         for line in file:
             a.append(list(map(str, line.strip().split(","))))
-    with open("Unitary/adjunitary{}.txt".format(n), "r") as file:
+    with open("adjunitary{}.txt".format(n), "r") as file:
         for line in file:
             b.append(list(map(str, line.strip().split(","))))
     
