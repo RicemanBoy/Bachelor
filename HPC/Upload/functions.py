@@ -483,23 +483,21 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
 
     return zeros, ones, err
 
-def qec(qc: QuantumCircuit, pos = 0):
+def qec(qc: QuantumCircuit, pos = 0):           #92 gates
     flags = ClassicalRegister(8)
     qc.add_register(flags)
     anc = qc.num_qubits - 1
     ancc = anc - 1
     if hads[pos]%2==1:
         #X3 X6 Stabilizer:
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
+        qc.reset(anc)
+        qc.id(anc)
         qc.h(anc)
-        qc.cx(anc, ancc)
         qc.cx(anc, 3+9*pos)
-        qc.cx(anc, ancc)
         qc.cx(anc, 6+9*pos)
         qc.h(anc)
-        qc.id(anc), qc.id(ancc)
-        qc.measure(anc,0), qc.measure(ancc, flags[0])
+        qc.id(anc)
+        qc.measure(anc,0)
 
         #X0 X1 X3 X4 Stabilizer:
         qc.reset(anc), qc.reset(ancc)
@@ -530,16 +528,14 @@ def qec(qc: QuantumCircuit, pos = 0):
         qc.measure(anc,2), qc.measure(ancc, flags[2])
 
         #X2 X5 Stabilizer:
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
+        qc.reset(anc)
+        qc.id(anc)
         qc.h(anc)
-        qc.cx(anc, ancc)
         qc.cx(anc, 2+9*pos)
-        qc.cx(anc, ancc)
         qc.cx(anc, 5+9*pos)
         qc.h(anc)
-        qc.id(anc), qc.id(ancc)
-        qc.measure(anc,3), qc.measure(ancc, flags[3])
+        qc.id(anc)
+        qc.measure(anc,3)
 
         with qc.if_test((0,1)):             #6
             with qc.if_test((1,0)):
@@ -574,16 +570,12 @@ def qec(qc: QuantumCircuit, pos = 0):
     ###########################################################################################################
 
         #Z0 Z1 Stabilizer:
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.h(ancc)
-        qc.cx(ancc, anc)
+        qc.reset(anc)
+        qc.id(anc)
         qc.cx(0+9*pos, anc)
-        qc.cx(ancc, anc)
         qc.cx(1+9*pos, anc)
-        qc.h(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.measure(anc,0), qc.measure(ancc, flags[4])
+        qc.id(anc)
+        qc.measure(anc,0)
 
         #Z1 Z2 Z4 Z5 Stabilizer:
         qc.reset(anc), qc.reset(ancc)
@@ -614,16 +606,12 @@ def qec(qc: QuantumCircuit, pos = 0):
         qc.measure(anc,2), qc.measure(ancc, flags[6])
 
         #Z7 Z8 Stabilizer:
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.h(ancc)
-        qc.cx(ancc, anc)
+        qc.reset(anc)
+        qc.id(anc)
         qc.cx(7+9*pos, anc)
-        qc.cx(ancc, anc)
         qc.cx(8+9*pos, anc)
-        qc.h(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.measure(anc,3), qc.measure(ancc, flags[7])
+        qc.id(anc)
+        qc.measure(anc,3)
         
         with qc.if_test((0,1)):             #0
             with qc.if_test((1,0)):
@@ -657,16 +645,14 @@ def qec(qc: QuantumCircuit, pos = 0):
 
     else:
         #X0 X1 Stabilizer:
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
+        qc.reset(anc)
+        qc.id(anc)
         qc.h(anc)
-        qc.cx(anc, ancc)
         qc.cx(anc, 0+9*pos)
-        qc.cx(anc, ancc)
         qc.cx(anc, 1+9*pos)
         qc.h(anc)
-        qc.id(anc), qc.id(ancc)
-        qc.measure(anc,0), qc.measure(ancc, flags[0])
+        qc.id(anc)
+        qc.measure(anc,0)
         
         #X1 X2 X4 X5 Stabilizer:
         qc.reset(anc), qc.reset(ancc)
@@ -697,16 +683,14 @@ def qec(qc: QuantumCircuit, pos = 0):
         qc.measure(anc,2), qc.measure(ancc, flags[2])
 
         #X7 X8 Stabilizer:
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
+        qc.reset(anc)
+        qc.id(anc)
         qc.h(anc)
-        qc.cx(anc, ancc)
         qc.cx(anc, 7+9*pos)
-        qc.cx(anc, ancc)
         qc.cx(anc, 8+9*pos)
         qc.h(anc)
-        qc.id(anc), qc.id(ancc)
-        qc.measure(anc,3), qc.measure(ancc, flags[3])
+        qc.id(anc)
+        qc.measure(anc,3)
 
         with qc.if_test((0,1)):             #0
             with qc.if_test((1,0)):    
@@ -741,16 +725,12 @@ def qec(qc: QuantumCircuit, pos = 0):
     ###########################################################################################################
 
         #Z3 Z6 Stabilizer:
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.h(ancc)
-        qc.cx(ancc, anc)
+        qc.reset(anc)
+        qc.id(anc)
         qc.cx(3+9*pos, anc)
-        qc.cx(ancc, anc)
         qc.cx(6+9*pos, anc)
-        qc.h(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.measure(anc,0), qc.measure(ancc, flags[4])
+        qc.id(anc)
+        qc.measure(anc,0)
 
         #Z0 Z1 Z3 Z4 Stabilizer:
         qc.reset(anc), qc.reset(ancc)
@@ -781,16 +761,12 @@ def qec(qc: QuantumCircuit, pos = 0):
         qc.measure(anc,2), qc.measure(ancc, flags[6])
 
         #Z2 Z5 Stabilizer:
-        qc.reset(anc), qc.reset(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.h(ancc)
-        qc.cx(ancc, anc)
+        qc.reset(anc)
+        qc.id(anc)
         qc.cx(2+9*pos, anc)
-        qc.cx(ancc, anc)
         qc.cx(5+9*pos, anc)
-        qc.h(ancc)
-        qc.id(anc), qc.id(ancc)
-        qc.measure(anc,3), qc.measure(ancc, flags[7])
+        qc.id(anc)
+        qc.measure(anc,3)
         
         with qc.if_test((0,1)):             #6
             with qc.if_test((1,0)):
