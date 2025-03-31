@@ -364,12 +364,12 @@ def CT_L(qc: QuantumCircuit, q: list, n: list, tracker, err = False):
     # if err:
     #     qec_ft(qc, q, tracker)
     root_T_L(qc, q, 0, n, tracker)
-    if err:
-        qec_ft(qc, q, tracker)
-    root_T_L(qc, q, 1, n, tracker)
-    CNOT_L(qc, q, 0)
     # if err:
     #     qec_ft(qc, q, tracker)
+    root_T_L(qc, q, 1, n, tracker)
+    CNOT_L(qc, q, 0)
+    if err:
+        qec_ft(qc, q, tracker)
     adj_root_T_L(qc, q, 1, n, tracker)
     CNOT_L(qc, q, 0)
 
@@ -929,7 +929,7 @@ def fullpp_ft(counts: dict, shots: int, cbits: int, track, two = True):
 
 ################################################################################################################################################################
 def gen_data(name):
-    x = np.linspace(0,0.001,10)
+    x = np.linspace(0,0.03,20)
     shots = 100
     pre, post, nn, ne, en, ee, pre2, two, post2, nn2, ne2, ee2, en2 = [],[],[],[],[],[],[],[],[],[],[],[],[]
     for i in x:
@@ -938,9 +938,9 @@ def gen_data(name):
         X_L(qc, q, 1)
         H_L(qc, q, 0)
         #############################
-        for j in range(4):
-            CU_L(qc, q, n, tracker, err=False)
+        CT_L(qc, q, n, tracker, err=False)
         ###############################
+        adj_T_L(qc, q, 0)
         H_L(qc, q, 0)
         counts, cbits = readout(qc, shots, q, noise=i)
         result = fullpp_ft(counts, shots, cbits, tracker, True)
@@ -952,9 +952,9 @@ def gen_data(name):
         X_L(qc, q, 1)
         H_L(qc, q, 0)
         #############################
-        for j in range(4):
-            CU_L(qc, q, n, tracker, err=True)
+        CT_L(qc, q, n, tracker, err=True)
         ###############################
+        adj_T_L(qc, q, 0)
         H_L(qc, q, 0)
         counts, cbits = readout(qc, shots, q, noise=i)
         result = fullpp_ft(counts, shots, cbits, tracker, True)
@@ -962,4 +962,4 @@ def gen_data(name):
         pre2.append(result[0]), two.append(result[1]), post2.append(result[2]), nn2.append(result[3]), ne2.append(result[4]), en2.append(result[5]), ee2.append(result[6])
 
     data = np.array((x,pre,post,nn,ne,en,ee,pre2,two,post2,nn2,ne2,en2,ee2))
-    np.savetxt("FTCarbon_e{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTCarbon_3rd_c{}.txt".format(name), data, delimiter=",")

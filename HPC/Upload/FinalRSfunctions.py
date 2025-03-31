@@ -8,7 +8,7 @@ from qiskit_aer.noise import (NoiseModel, pauli_error)
 
 from qiskit.circuit.library import UnitaryGate
 
-
+################################################################################################################################################################
 matrix_h = ([[2**(-0.5),2**(-0.5)],[2**(-0.5),-2**(-0.5)]])
 h_ideal = UnitaryGate(matrix_h)
 
@@ -20,11 +20,10 @@ x_ideal = UnitaryGate(matrix_x)
 
 matrix_z = ([[1,0],[0,-1]])
 z_ideal = UnitaryGate(matrix_z)
-################################################################################################################################################################
 
 def rot_surf_code(n: int) -> QuantumCircuit:              #1st anc = third last qubit = syndrome/parity measurement qubit, 2nd anc = sec last qubit = magic state for S Gate, 3rd anc = last qubit = magic state for T-Gate
     qr = QuantumRegister(9*n+2, "q")
-    cbit = ClassicalRegister(9,"c")
+    cbit = ClassicalRegister(1,"c")
     qc = QuantumCircuit(qr,cbit)
     for i in range(9*n):
         qc.id(i)
@@ -48,315 +47,43 @@ def rot_surf_code(n: int) -> QuantumCircuit:              #1st anc = third last 
         qc.cx(9*i+6,9*i+7)
     return qc
 
-def X_L(qc: QuantumCircuit, had = False, n=0):            #n muss bei 0 anfangen, also z.B. man hat 3 Circuits und will X_L auf den ersten anwenden ---> n = 0 !!!
-    if had:
-        qc.x(9*n+3)
-        qc.x(9*n+4)
-        qc.x(9*n+5)
+def X_L(qc: QuantumCircuit, pos=0):            #n muss bei 0 anfangen, also z.B. man hat 3 Circuits und will X_L auf den ersten anwenden ---> n = 0 !!!
+    global hads
+    
+    if hads[pos]%2 == 1:
+        qc.x(9*pos+3)
+        qc.x(9*pos+4)
+        qc.x(9*pos+5)
     else:
-        qc.x(9*n+1)
-        qc.x(9*n+4)
-        qc.x(9*n+7)
+        qc.x(9*pos+1)
+        qc.x(9*pos+4)
+        qc.x(9*pos+7)
 
-def Z_L(qc: QuantumCircuit, had = False, n=0):            #n muss bei 0 anfangen, also z.B. man hat 3 Circuits und will Z_L auf den ersten anwenden ---> n = 0 !!!
-    if had:
-        qc.z(9*n+1)
-        qc.z(9*n+4)
-        qc.z(9*n+7)
+def Z_L(qc: QuantumCircuit, pos=0):            #n muss bei 0 anfangen, also z.B. man hat 3 Circuits und will Z_L auf den ersten anwenden ---> n = 0 !!!
+    global hads
+    
+    if hads[pos]%2 == 1:
+        qc.z(9*pos+1)
+        qc.z(9*pos+4)
+        qc.z(9*pos+7)
     else:
-        qc.z(9*n+3)
-        qc.z(9*n+4)
-        qc.z(9*n+5)
+        qc.z(9*pos+3)
+        qc.z(9*pos+4)
+        qc.z(9*pos+5)
 
 def H_L(qc: QuantumCircuit, pos=0):              #H-Gates auf EINEN Circuit, wieder erster Circuit --> n = 0, zweiter Circuit --> n = 1 , usw.
     for i in range(9):
         qc.h(9*pos+i)
-
-def S_L(qc: QuantumCircuit, had = False, pos=0):    
-    anc = qc.num_qubits - 1
-    qc.reset(anc)
-
-    #qc.h(magic_S)
-    qc.append(h_ideal,[anc])
-    qc.s(anc)
-
-    if had == False:
-        qc.append(cx_ideal, [3+9*pos, anc])
-        qc.append(cx_ideal, [4+9*pos, anc])
-        qc.append(cx_ideal, [5+9*pos, anc])         
+    global hads
+    if pos == 0:
+        hads[0] += 1
     else:
-        qc.append(cx_ideal, [1+9*pos, anc])
-        qc.append(cx_ideal, [4+9*pos, anc])
-        qc.append(cx_ideal, [7+9*pos, anc])    
+        hads[1] += 1
 
-    qc.measure(anc, 0)
-
-    if had == False:
-        with qc.if_test((0,1)):
-            qc.z(3+9*pos)
-            qc.z(4+9*pos)
-            qc.z(5+9*pos)
-    else:
-        with qc.if_test((0,1)):
-            qc.z(1+9*pos)
-            qc.z(4+9*pos)
-            qc.z(7+9*pos)
-
-def adj_S_L(qc: QuantumCircuit, had = False, pos=0):
-    anc = qc.num_qubits - 1
-    qc.reset(anc)
-
-    #qc.h(magic_S)
-    qc.append(h_ideal,[anc])
-    qc.sdg(anc)
-
-    if had == False:
-        qc.append(cx_ideal, [3+9*pos, anc])
-        qc.append(cx_ideal, [4+9*pos, anc])
-        qc.append(cx_ideal, [5+9*pos, anc])       
-    else:
-        qc.append(cx_ideal, [1+9*pos, anc])
-        qc.append(cx_ideal, [4+9*pos, anc])
-        qc.append(cx_ideal, [7+9*pos, anc])  
-
-    qc.measure(anc, 0)
-
-    if had == False:
-        with qc.if_test((0,1)):
-            qc.z(3+9*pos)
-            qc.z(4+9*pos)
-            qc.z(5+9*pos)
-    else:
-        with qc.if_test((0,1)):
-            qc.z(1+9*pos)
-            qc.z(4+9*pos)
-            qc.z(7+9*pos)
-    
-def T_L(qc: QuantumCircuit, had = False, pos = 0):
-    anc = qc.num_qubits - 1
-    qc.reset(anc)
-
-    #qc.h(magic_S)
-    qc.append(h_ideal,[anc])
-    qc.t(anc)
-
-    if had == False:
-        qc.append(cx_ideal, [anc, 3+9*pos])
-        qc.append(cx_ideal, [anc, 4+9*pos])
-        qc.append(cx_ideal, [anc, 5+9*pos])          
-    else:
-        qc.append(cx_ideal, [anc, 1+9*pos])
-        qc.append(cx_ideal, [anc, 4+9*pos])
-        qc.append(cx_ideal, [anc, 7+9*pos])   
-
-    qc.measure(anc, 4)
-
-    if had == False:
-        with qc.if_test((4,1)):
-            qc.reset(anc)
-            qc.append(h_ideal,[anc])
-            qc.s(anc)
-            qc.append(cx_ideal, [anc, 3+9*pos])
-            qc.append(cx_ideal, [anc, 4+9*pos])
-            qc.append(cx_ideal, [anc, 5+9*pos])     
-            qc.measure(anc, 0)
-            with qc.if_test((0,1)):
-                qc.z(3+9*pos)
-                qc.z(4+9*pos)
-                qc.z(5+9*pos)
-    else:
-        with qc.if_test((4,1)):
-            qc.reset(anc)
-            qc.append(h_ideal,[anc])
-            qc.s(anc)
-            qc.append(cx_ideal, [anc, 1+9*pos])
-            qc.append(cx_ideal, [anc, 4+9*pos])
-            qc.append(cx_ideal, [anc, 7+9*pos])     
-            qc.measure(anc, 0)
-            with qc.if_test((0,1)):
-                qc.z(1+9*pos)
-                qc.z(4+9*pos)
-                qc.z(7+9*pos)
-
-def adj_T_L(qc: QuantumCircuit, had = False, pos = 0):
-    anc = qc.num_qubits - 1
-    qc.reset(anc)
-
-    #qc.h(magic_S)
-    qc.append(h_ideal,[anc])
-    qc.tdg(anc)
-
-    if had == False:
-        qc.append(cx_ideal, [anc, 3+9*pos])
-        qc.append(cx_ideal, [anc, 4+9*pos])
-        qc.append(cx_ideal, [anc, 5+9*pos])         
-    else:
-        qc.append(cx_ideal, [anc, 1+9*pos])
-        qc.append(cx_ideal, [anc, 4+9*pos])
-        qc.append(cx_ideal, [anc, 7+9*pos])   
-    qc.measure(anc, 4)
-    if had == False:
-        with qc.if_test((4,1)):
-            qc.reset(anc)
-            qc.append(h_ideal,[anc])
-            qc.sdg(anc)
-            qc.append(cx_ideal, [anc, 3+9*pos])
-            qc.append(cx_ideal, [anc, 4+9*pos])
-            qc.append(cx_ideal, [anc, 5+9*pos])   
-            qc.measure(anc, 0)
-            with qc.if_test((0,1)):
-                qc.z(3+9*pos)
-                qc.z(4+9*pos)
-                qc.z(5+9*pos)
-    else:
-        with qc.if_test((4,1)):
-            qc.reset(anc)
-            qc.append(h_ideal,[anc])
-            qc.sdg(anc)
-            qc.append(cx_ideal, [anc, 1+9*pos])
-            qc.append(cx_ideal, [anc, 4+9*pos])
-            qc.append(cx_ideal, [anc, 7+9*pos])    
-            qc.measure(anc, 0)
-            with qc.if_test((0,1)):
-                qc.z(1+9*pos)
-                qc.z(4+9*pos)
-                qc.z(7+9*pos)
-
-circ = QuantumCircuit(1)
-circ.rz(np.pi/8, 0)
-basis = ["t", "tdg", "z", "h"]
-approx = generate_basic_approximations(basis, depth=3)
-skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
-rootT = skd(circ)
-
-def root_T_L(qc: QuantumCircuit, had = True, pos = 0):
-    instruction = rootT.data
-    for i in instruction:
-        if i.name == "t":
-            T_L(qc, had = had, pos=pos)
-        if i.name == "tdg":
-            adj_T_L(qc, had = had, pos=pos)
-        if i.name == "h":
-            H_L(qc, pos=pos)
-            had = not had
-
-circ = QuantumCircuit(1)
-circ.rz(-np.pi/8, 0)
-basis = ["t", "tdg", "z", "h"]
-approx = generate_basic_approximations(basis, depth=3)
-skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
-adj_rootT = skd(circ)
-
-def adj_root_T_L(qc: QuantumCircuit, had = True, pos = 0):
-    instruction = adj_rootT.data
-
-    for i in instruction:
-        if i.name == "t":
-            T_L(qc, had = had, pos=pos)
-        if i.name == "tdg":
-            adj_T_L(qc, had = had, pos=pos)
-        if i.name == "h":
-            H_L(qc, pos=pos)
-            had = not had
-
-def CT_L(qc: QuantumCircuit, had = "00", qecc = False):
-    if had == "00":
-        if qecc:
-            qec(qc, had = False, pos = 0)
-            qec(qc, had = False, pos = 1)
-        root_T_L(qc, had = False, pos=0)
-        root_T_L(qc, had = False, pos=1)
-        CNOT(qc, had = had, control=0)
-        if qecc:
-            qec(qc, had = False, pos = 0)
-            qec(qc, had = False, pos = 1)
-        adj_root_T_L(qc, had = False, pos=1)
-        CNOT(qc, had = had, control=0)
-    elif had == "01":
-        if qecc:
-            qec(qc, had = False, pos = 0)
-            qec(qc, had = True, pos = 1)
-        root_T_L(qc, had = False, pos=0)
-        root_T_L(qc, had = True, pos=1)
-        CNOT(qc, had = had, control=0)
-        if qecc:
-            qec(qc, had = False, pos = 0)
-            qec(qc, had = True, pos = 1)
-        adj_root_T_L(qc, had = True, pos=1)
-        CNOT(qc, had = had, control=0)
-    elif had == "10":
-        # if qecc:
-        #     qec(qc, had = True, pos = 0)
-        #     qec(qc, had = False, pos = 1)
-        root_T_L(qc, had = True, pos=0)
-        root_T_L(qc, had = False, pos=1)
-        CNOT(qc, had = had, control=0)
-        adj_root_T_L(qc, had = False, pos=1)
-        if qecc:
-            #qec(qc, had = True, pos = 0)
-            qec(qc, had = False, pos = 1)
-        CNOT(qc, had = had, control=0)
-    elif had == "11":
-        if qecc:
-            qec(qc, had = True, pos = 0)
-            qec(qc, had = True, pos = 1)
-        root_T_L(qc, had = True, pos=0)
-        root_T_L(qc, had = True, pos=1)
-        CNOT(qc, had = had, control=0)
-        if qecc:
-            qec(qc, had = True, pos = 0)
-            qec(qc, had = True, pos = 1)
-        adj_root_T_L(qc, had = True, pos=1)
-        CNOT(qc, had = had, control=0)
-
-def U2(qc: QuantumCircuit, pos: int, had = False):
-    gate = ['s', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'sdg', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 's', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't']
-    for i in gate:
-        if i == "s":
-            S_L(qc, had=had, pos=pos)
-        if i == "sdg":
-            adj_S_L(qc, had=had, pos=pos)
-        if i == "t":
-            T_L(qc, had=had, pos=pos)
-        if i == "tdg":
-            adj_T_L(qc, had=had, pos=pos)
-        if i == "h":
-            H_L(qc, pos=pos)
-            had = not had
-
-def adjU2(qc: QuantumCircuit, pos: int, had = False):
-    gate = ['s', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'sdg', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 's', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't']
-    gate.reverse()
-    for i in gate:
-        if i == "sdg":
-            S_L(qc, had=had, pos=pos)
-        if i == "s":
-            adj_S_L(qc, had=had, pos=pos)
-        if i == "tdg":
-            T_L(qc, had=had, pos=pos)
-        if i == "t":
-            adj_T_L(qc, had=had, pos=pos)
-        if i == "h":
-            H_L(qc, pos=pos)
-            had = not had
-
-def CU_L(qc: QuantumCircuit, had = "10", err = False):
-    if had == "10":
-        U2(qc, had=True, pos=0)
-        if err:
-            qec(qc, had=True, pos=0)
-        U2(qc, had=False, pos=1)
-        if err:
-            qec(qc, had=False,pos=1)
-        CNOT(qc, 0)
-        adjU2(qc,  had=False, pos=1)
-        if err:
-            qec(qc,  had=False, pos=1)
-        CNOT(qc, 0)
-
-def CNOT(qc:QuantumCircuit, had = "00", control = 0):               #CNOT mit berücksichtigung der Rotation durch H-Gate
+def CNOT(qc:QuantumCircuit, control = 0):               #CNOT mit berücksichtigung der Rotation durch H-Gate
+    global hads
     if control == 0:
-        if had == "10":
+        if [i%2 for i in hads] == [1,0]:
             qc.cx(0,9+6)
             qc.cx(1,9+3)
             qc.cx(2,9+0)
@@ -366,7 +93,7 @@ def CNOT(qc:QuantumCircuit, had = "00", control = 0):               #CNOT mit be
             qc.cx(6,9+8)
             qc.cx(7,9+5)
             qc.cx(8,9+2)
-        elif had == "01":
+        elif [i%2 for i in hads] == [0,1]:
             qc.cx(0,9+2)
             qc.cx(1,9+5)
             qc.cx(2,9+8)
@@ -380,7 +107,7 @@ def CNOT(qc:QuantumCircuit, had = "00", control = 0):               #CNOT mit be
             for i in range(9):
                 qc.cx(i,9+i)
     elif control == 1:
-        if had == "01":
+        if [i%2 for i in hads] == [0,1]:
             qc.cx(9+0,6)
             qc.cx(9+1,3)
             qc.cx(9+2,0)
@@ -390,7 +117,7 @@ def CNOT(qc:QuantumCircuit, had = "00", control = 0):               #CNOT mit be
             qc.cx(9+6,8)
             qc.cx(9+7,5)
             qc.cx(9+8,2)
-        elif had == "10":
+        elif [i%2 for i in hads] == [1,0]:
             qc.cx(9+0,2)
             qc.cx(9+1,5)
             qc.cx(9+2,8)
@@ -404,43 +131,290 @@ def CNOT(qc:QuantumCircuit, had = "00", control = 0):               #CNOT mit be
             for i in range(9):
                 qc.cx(9+i,i)
 
-def control_S_L(qc: QuantumCircuit, had = "00"):
-    if had == "01":
-        T_L(qc, had=False, pos=0)
-        T_L(qc, had=True, pos=1)
-        CNOT(qc, had=had, control=0)
-        adj_T_L(qc, had=True, pos=1)
-        CNOT(qc, had=had, control=0)
-    elif had == "10":
-        T_L(qc, had=True, pos=0)
-        T_L(qc, had=False, pos=1)
-        CNOT(qc, had=had, control=0)
-        adj_T_L(qc, had=False, pos=1)
-        CNOT(qc, had=had, control=0)
-    else:   #had = "00" = "11"
-        T_L(qc, had=False, pos=0)
-        T_L(qc, had=False, pos=1)
-        CNOT(qc, had=had, control=0)
-        adj_T_L(qc, had=False, pos=1)
-        CNOT(qc, had=had, control=0)
+def S_L(qc: QuantumCircuit, pos=0):    
+    anc = qc.num_qubits - 1
+    qc.reset(anc)
+
+    global hads
+
+    #qc.h(magic_S)
+    qc.append(h_ideal,[anc])
+    qc.s(anc)
+
+    if hads[pos]%2 == 0:
+        qc.append(cx_ideal, [anc, 3+9*pos])
+        qc.append(cx_ideal, [anc, 4+9*pos])
+        qc.append(cx_ideal, [anc, 5+9*pos])         
+    else:
+        qc.append(cx_ideal, [anc, 1+9*pos])
+        qc.append(cx_ideal, [anc, 4+9*pos])
+        qc.append(cx_ideal, [anc, 7+9*pos])    
+
+    qc.measure(anc, 0)
+
+    if hads[pos]%2 == 0:
+        with qc.if_test((0,1)):
+            qc.z(3+9*pos)
+            qc.z(4+9*pos)
+            qc.z(5+9*pos)
+    else:
+        with qc.if_test((0,1)):
+            qc.z(1+9*pos)
+            qc.z(4+9*pos)
+            qc.z(7+9*pos)
+
+def adj_S_L(qc: QuantumCircuit, pos=0):
+    anc = qc.num_qubits - 1
+    qc.reset(anc)
+
+    #qc.h(magic_S)
+    qc.append(h_ideal,[anc])
+    qc.sdg(anc)
+
+    global hads
+
+    if hads[pos]%2 == 0:
+        qc.append(cx_ideal, [anc, 3+9*pos])
+        qc.append(cx_ideal, [anc, 4+9*pos])
+        qc.append(cx_ideal, [anc, 5+9*pos])         
+    else:
+        qc.append(cx_ideal, [anc, 1+9*pos])
+        qc.append(cx_ideal, [anc, 4+9*pos])
+        qc.append(cx_ideal, [anc, 7+9*pos])    
+
+    qc.measure(anc, 0)
+
+    if hads[pos]%2 == 0:
+        with qc.if_test((0,1)):
+            qc.z(3+9*pos)
+            qc.z(4+9*pos)
+            qc.z(5+9*pos)
+    else:
+        with qc.if_test((0,1)):
+            qc.z(1+9*pos)
+            qc.z(4+9*pos)
+            qc.z(7+9*pos)
+    
+def T_L(qc: QuantumCircuit, pos = 0):
+    anc = qc.num_qubits - 1
+    qc.reset(anc)
+
+    #qc.h(magic_S)
+    qc.append(h_ideal,[anc])
+    qc.t(anc)
+
+    global hads
+
+    if hads[pos]%2 == 0:
+        qc.append(cx_ideal, [anc, 3+9*pos])
+        qc.append(cx_ideal, [anc, 4+9*pos])
+        qc.append(cx_ideal, [anc, 5+9*pos])          
+    else:
+        qc.append(cx_ideal, [anc, 1+9*pos])
+        qc.append(cx_ideal, [anc, 4+9*pos])
+        qc.append(cx_ideal, [anc, 7+9*pos])   
+
+    qc.measure(anc, 0)
+
+    if hads[pos]%2 == 0:
+        with qc.if_test((0,1)):
+            qc.reset(anc)
+            qc.append(h_ideal,[anc])
+            qc.s(anc)
+            qc.append(cx_ideal, [anc, 3+9*pos])
+            qc.append(cx_ideal, [anc, 4+9*pos])
+            qc.append(cx_ideal, [anc, 5+9*pos])     
+            qc.measure(anc, 0)
+            with qc.if_test((0,1)):
+                qc.z(3+9*pos)
+                qc.z(4+9*pos)
+                qc.z(5+9*pos)
+    else:
+        with qc.if_test((0,1)):
+            qc.reset(anc)
+            qc.append(h_ideal,[anc])
+            qc.s(anc)
+            qc.append(cx_ideal, [anc, 1+9*pos])
+            qc.append(cx_ideal, [anc, 4+9*pos])
+            qc.append(cx_ideal, [anc, 7+9*pos])     
+            qc.measure(anc, 0)
+            with qc.if_test((0,1)):
+                qc.z(1+9*pos)
+                qc.z(4+9*pos)
+                qc.z(7+9*pos)
+
+def adj_T_L(qc: QuantumCircuit, pos = 0):
+    anc = qc.num_qubits - 1
+    qc.reset(anc)
+
+    #qc.h(magic_S)
+    qc.append(h_ideal,[anc])
+    qc.tdg(anc)
+
+    global hads
+
+    if hads[pos]%2 == 0:
+        qc.append(cx_ideal, [anc, 3+9*pos])
+        qc.append(cx_ideal, [anc, 4+9*pos])
+        qc.append(cx_ideal, [anc, 5+9*pos])         
+    else:
+        qc.append(cx_ideal, [anc, 1+9*pos])
+        qc.append(cx_ideal, [anc, 4+9*pos])
+        qc.append(cx_ideal, [anc, 7+9*pos])   
+    qc.measure(anc, 0)
+
+    if hads[pos]%2 == 0:
+        with qc.if_test((0,1)):
+            qc.reset(anc)
+            qc.append(h_ideal,[anc])
+            qc.sdg(anc)
+            qc.append(cx_ideal, [anc, 3+9*pos])
+            qc.append(cx_ideal, [anc, 4+9*pos])
+            qc.append(cx_ideal, [anc, 5+9*pos])   
+            qc.measure(anc, 0)
+            with qc.if_test((0,1)):
+                qc.z(3+9*pos)
+                qc.z(4+9*pos)
+                qc.z(5+9*pos)
+    else:
+        with qc.if_test((0,1)):
+            qc.reset(anc)
+            qc.append(h_ideal,[anc])
+            qc.sdg(anc)
+            qc.append(cx_ideal, [anc, 1+9*pos])
+            qc.append(cx_ideal, [anc, 4+9*pos])
+            qc.append(cx_ideal, [anc, 7+9*pos])    
+            qc.measure(anc, 0)
+            with qc.if_test((0,1)):
+                qc.z(1+9*pos)
+                qc.z(4+9*pos)
+                qc.z(7+9*pos)
+
+def convert(bin: str):                  #konvertiert den bitstring in decimal, e.g. 0110 = 0.375
+    k = list(bin)
+    a = [int(i) for i in k]
+    n = 0
+    for i in range(len(a)):
+        if a[i] == 1:
+            n += 1/2**(i+1)
+    return n
+
+def U2(qc: QuantumCircuit, pos: int, gate: list):
+    for i in gate:
+        if i == "s":
+            S_L(qc, pos=pos)
+        if i == "sdg":
+            adj_S_L(qc, pos=pos)
+        if i == "t":
+            T_L(qc, pos=pos)
+        if i == "tdg":
+            adj_T_L(qc, pos=pos)
+        if i == "h":
+            H_L(qc, pos=pos)
+        if i == "z":
+            Z_L(qc, pos=pos)
+
+def CU_L(qc: QuantumCircuit, Ugates: list, adjUgates: list, err = False):
+    U2(qc, 0, Ugates)
+    if err:
+        qec(qc, pos=0)
+    U2(qc, 1, Ugates)
+    if err:
+        qec(qc, pos=1)
+    CNOT(qc, control=0)
+    U2(qc, 1, adjUgates)
+    if err:
+        qec(qc, pos=1)
+    CNOT(qc, control=0)
+
+def Leon(iter: int, n:int, argh: float, err = False, k = 1):       #each iteration own circuit
+    angle = np.linspace(0,1,n+2)
+    angle = np.delete(angle, [n+1])
+    angle = np.delete(angle, [0])
+
+    a, b = [], []
+    with open("unitary{}.txt".format(n), "r") as file:
+        for line in file:
+            a.append(list(map(str, line.strip().split(","))))
+    with open("adjunitary{}.txt".format(n), "r") as file:
+        for line in file:
+            b.append(list(map(str, line.strip().split(","))))
+    
+    y = 0
+    bruh1 = []
+    global hads
+    for m in range(k):
+        for o in range(n):
+            bitstring = ""
+            rots = []
+            for t in range(iter):
+                rots = [k*0.5 for k in rots]
+                while True:
+                    hads = [0,0]
+                    qc = rot_surf_code(2)
+
+                    X_L(qc, 1)
+                    H_L(qc, pos=0)
+                    #############################
+                    for j in range(2**(iter-t-1)):
+                        CU_L(qc, a[o], b[o], err=err)
+                    ###############################
+                    for l in rots:
+                        if l == 0.25:
+                            adj_S_L(qc, pos=0)
+                        if l == 0.125:
+                            adj_T_L(qc, pos=0)
+                    H_L(qc, pos=0)
+                    if err:
+                        qec(qc, pos = 0)
+                    zeros, ones, err = readout(qc, pos=0, shots=1, noise=argh)
+            
+                    if zeros == 1:
+                        bitstring += "0"
+                        break
+                    if ones == 1:
+                        bitstring += "1"
+                        rots.append(0.5)
+                        break
+            bitstring = bitstring[::-1]
+            hmm = convert(bitstring)
+            diff = np.abs(hmm-angle[o])
+            y += diff
+            bruh1.append(diff)
+    y = y/(n*k)
+    arg = 0
+    for i in range(len(bruh1)):
+        arg += (y-bruh1[i])**2
+    sigma = ((1/(k*n))*arg)**0.5
+    sigma = sigma/((k*n)**0.5)
+
+    return y, sigma
+
+def control_S_L(qc: QuantumCircuit):
+    T_L(qc, pos=0)
+    T_L(qc, pos=1)
+    CNOT(qc, control=0)
+    adj_T_L(qc, pos=1)
+    CNOT(qc, control=0)
 
 def control_Z_L(qc: QuantumCircuit):
     H_L(qc, pos = 1)
     CNOT(qc, control = 0)            #aufgrund des H eine Zeile drüber, geht das normale CNOT
     H_L(qc, pos = 1)
 
-def readout(qc: QuantumCircuit, had: int, pos: int, shots: int, noise = 0):
+def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     code0 = ['000110101', '110110110', '110110101', '110000000', '000110110', '101101101', '011101101', '011011000', '011011011', '110000011', '000000000', '011101110', '101011011', '101101110', '000000011', '101011000']
     code1 = ['010100111', '010010001', '111111111', '001001010', '111001010', '001111111', '100010010', '111111100', '100100100', '100010001', '001001001', '010010010', '100100111', '111001001', '001111100', '010100100']#
     read = ClassicalRegister(9)
     qc.add_register(read)
 
+    global hads
     for i in range(9):
         qc.id(i+9*pos)
-    if had%4 == 0:
+    if hads[pos]%2 == 0:
         for i in range(9):
             qc.measure(i+9*pos, read[8-i])
-    elif had%4 == 1:
+    elif hads[pos]%2 == 1:
         qc.measure(0+9*pos, read[8-6])
         qc.measure(1+9*pos, read[8-3])
         qc.measure(2+9*pos, read[8-0])
@@ -450,19 +424,6 @@ def readout(qc: QuantumCircuit, had: int, pos: int, shots: int, noise = 0):
         qc.measure(6+9*pos, read[8-8])
         qc.measure(7+9*pos, read[8-5])
         qc.measure(8+9*pos, read[8-2])
-    elif had%4 == 2:
-        for i in range(9):
-            qc.measure(i+9*pos, read[i])
-    elif had%4 == 3:
-        qc.measure(0+9*pos, read[8-2])
-        qc.measure(1+9*pos, read[8-5])
-        qc.measure(2+9*pos, read[8-8])
-        qc.measure(3+9*pos, read[8-1])
-        qc.measure(4+9*pos, read[8-4])
-        qc.measure(5+9*pos, read[8-7])
-        qc.measure(6+9*pos, read[8-0])
-        qc.measure(7+9*pos, read[8-3])
-        qc.measure(8+9*pos, read[8-6])
 
     p = noise
     p_error = pauli_error([["X",p/2],["I",1-p],["Z",p/2]])
@@ -480,10 +441,12 @@ def readout(qc: QuantumCircuit, had: int, pos: int, shots: int, noise = 0):
     bitstring = list(counts.keys())
     hmm = list(counts.values())
 
+    bitstring = [i.replace(" ","") for i in bitstring]
+
     allcbits = len(bitstring[0])
     bits = [i[:9] for i in bitstring]
 
-    flags = [i[9:allcbits-10] for i in bitstring]
+    flags = [i[9:allcbits-2] for i in bitstring]
 
     for i in range(len(bits)):
         for j in code0:
@@ -837,39 +800,15 @@ def qec(qc: QuantumCircuit, pos = 0):           #92 gates
 
 ################################################################################################################################################################
 def gen_data(name):
-    x = np.linspace(0,0.001,5)
-    shots = 50
-    one, zero, post, one_QEC, zero_QEC, post_QEC = [],[],[],[],[],[]
-    for i in x:
-        qc = rot_surf_code(2)
+    p = np.linspace(0.01,0.02,5)
+    y_all, y_all1 = [],[]
+    err, err1 = [], []
 
-        X_L(qc, False, 1)
-        H_L(qc, pos=0)
-        # ################################################
-        for j in range(4):
-            CU_L(qc, "10", err=True)
-        # ################################################
-        H_L(qc ,pos=0)
-        qec(qc, False, 0)
+    for r in p:
+        ok, errr = Leon(3, 15, argh=r, err=False, k=1)
+        y_all.append(ok), err.append(errr)
+        ok1, errr1 = Leon(3, 15, argh=r, err=True, k=1)
+        y_all1.append(ok1), err1.append(errr1)
 
-        zeros, ones, err = readout(qc, had=2, pos=0, shots=shots, noise=i)
-
-        one_QEC.append(ones), zero_QEC.append(zeros), post_QEC.append(err)
-        ######################################## Nochmal aber ohne QEC
-
-        qc = rot_surf_code(2)
-
-        X_L(qc, False, 1)
-        H_L(qc, pos=0)
-        # ################################################
-        for j in range(4):
-            CU_L(qc, "10", err=False)
-        # ################################################
-        H_L(qc ,pos=0)
-
-        zeros, ones, err = readout(qc, had=2, pos=0, shots=shots, noise=i)
-
-        one.append(ones), zero.append(zeros), post.append(err)
-
-    data = np.array((x,zero,one,post,zero_QEC,one_QEC,post_QEC))
-    np.savetxt("FTRotSurf_a{}.txt".format(name), data, delimiter=",")
+    data = np.array((p, y_all, y_all1, err, err1))
+    np.savetxt("RotSurfFinal_a++{}.txt".format(name), data, delimiter=",")

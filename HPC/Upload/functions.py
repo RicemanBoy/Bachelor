@@ -8,7 +8,7 @@ from qiskit_aer.noise import (NoiseModel, pauli_error)
 
 from qiskit.circuit.library import UnitaryGate
 
-################################################################################################################################################################
+
 matrix_h = ([[2**(-0.5),2**(-0.5)],[2**(-0.5),-2**(-0.5)]])
 h_ideal = UnitaryGate(matrix_h)
 
@@ -20,6 +20,7 @@ x_ideal = UnitaryGate(matrix_x)
 
 matrix_z = ([[1,0],[0,-1]])
 z_ideal = UnitaryGate(matrix_z)
+################################################################################################################################################################
 
 def rot_surf_code(n: int) -> QuantumCircuit:              #1st anc = third last qubit = syndrome/parity measurement qubit, 2nd anc = sec last qubit = magic state for S Gate, 3rd anc = last qubit = magic state for T-Gate
     qr = QuantumRegister(9*n+2, "q")
@@ -290,105 +291,52 @@ def adj_T_L(qc: QuantumCircuit, pos = 0):
                 qc.z(4+9*pos)
                 qc.z(7+9*pos)
 
-def convert(bin: str):                  #konvertiert den bitstring in decimal, e.g. 0110 = 0.375
-    k = list(bin)
-    a = [int(i) for i in k]
-    n = 0
-    for i in range(len(a)):
-        if a[i] == 1:
-            n += 1/2**(i+1)
-    return n
+circ = QuantumCircuit(1)
+circ.rz(np.pi/8, 0)
+basis = ["t", "tdg", "z", "h"]
+approx = generate_basic_approximations(basis, depth=3)
+skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
+rootT = skd(circ)
 
-def U2(qc: QuantumCircuit, pos: int, gate: list):
-    for i in gate:
-        if i == "s":
-            S_L(qc, pos=pos)
-        if i == "sdg":
-            adj_S_L(qc, pos=pos)
-        if i == "t":
+def root_T_L(qc: QuantumCircuit, pos = 0):
+    instruction = rootT.data
+    for i in instruction:
+        if i.name == "t":
             T_L(qc, pos=pos)
-        if i == "tdg":
+        if i.name == "tdg":
             adj_T_L(qc, pos=pos)
-        if i == "h":
+        if i.name == "h":
             H_L(qc, pos=pos)
-        if i == "z":
-            Z_L(qc, pos=pos)
 
-def CU_L(qc: QuantumCircuit, Ugates: list, adjUgates: list, err = False):
-    U2(qc, 0, Ugates)
-    if err:
-        qec(qc, pos=0)
-    U2(qc, 1, Ugates)
-    if err:
-        qec(qc, pos=1)
+circ = QuantumCircuit(1)
+circ.rz(-np.pi/8, 0)
+basis = ["t", "tdg", "z", "h"]
+approx = generate_basic_approximations(basis, depth=3)
+skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
+adj_rootT = skd(circ)
+
+def adj_root_T_L(qc: QuantumCircuit, pos = 0):
+    instruction = adj_rootT.data
+    for i in instruction:
+        if i.name == "t":
+            T_L(qc, pos=pos)
+        if i.name == "tdg":
+            adj_T_L(qc, pos=pos)
+        if i.name == "h":
+            H_L(qc, pos=pos)
+
+def CT_L(qc: QuantumCircuit, qecc = False):
+    # if qecc:
+    #     qec(qc, pos = 0)
+    #     qec(qc, pos = 1)
+    root_T_L(qc, pos=0)
+    root_T_L(qc, pos=1)
     CNOT(qc, control=0)
-    U2(qc, 1, adjUgates)
-    if err:
-        qec(qc, pos=1)
+    if qecc:
+        qec(qc, pos = 0)
+        #qec(qc, pos = 1)
+    adj_root_T_L(qc, pos=1)
     CNOT(qc, control=0)
-
-def Leon(iter: int, n:int, argh: float, err = False, k = 1):       #each iteration own circuit
-    angle = np.linspace(0,1,n+2)
-    angle = np.delete(angle, [n+1])
-    angle = np.delete(angle, [0])
-
-    a, b = [], []
-    with open("unitary{}.txt".format(n), "r") as file:
-        for line in file:
-            a.append(list(map(str, line.strip().split(","))))
-    with open("adjunitary{}.txt".format(n), "r") as file:
-        for line in file:
-            b.append(list(map(str, line.strip().split(","))))
-    
-    y = 0
-    bruh1 = []
-    global hads
-    for m in range(k):
-        for o in range(n):
-            bitstring = ""
-            rots = []
-            for t in range(iter):
-                rots = [k*0.5 for k in rots]
-                while True:
-                    hads = [0,0]
-                    qc = rot_surf_code(2)
-
-                    X_L(qc, 1)
-                    H_L(qc, pos=0)
-                    #############################
-                    for j in range(2**(iter-t-1)):
-                        CU_L(qc, a[o], b[o], err=err)
-                    ###############################
-                    for l in rots:
-                        if l == 0.25:
-                            adj_S_L(qc, pos=0)
-                        if l == 0.125:
-                            adj_T_L(qc, pos=0)
-                    H_L(qc, pos=0)
-                    if err:
-                        qec(qc, pos = 0)
-                    zeros, ones, err = readout(qc, pos=0, shots=1, noise=argh)
-            
-                    if zeros == 1:
-                        bitstring += "0"
-                        break
-                    if ones == 1:
-                        bitstring += "1"
-                        rots.append(0.5)
-                        break
-            bitstring = bitstring[::-1]
-            hmm = convert(bitstring)
-            diff = np.abs(hmm-angle[o])
-            y += diff
-            bruh1.append(diff)
-    y = y/(n*k)
-    arg = 0
-    for i in range(len(bruh1)):
-        arg += (y-bruh1[i])**2
-    sigma = ((1/(k*n))*arg)**0.5
-    sigma = sigma/((k*n)**0.5)
-
-    return y, sigma
 
 def control_S_L(qc: QuantumCircuit):
     T_L(qc, pos=0)
@@ -409,6 +357,7 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     qc.add_register(read)
 
     global hads
+
     for i in range(9):
         qc.id(i+9*pos)
     if hads[pos]%2 == 0:
@@ -798,17 +747,41 @@ def qec(qc: QuantumCircuit, pos = 0):           #92 gates
                 with qc.if_test((3,0)):
                     qc.x(7+9*pos)
 
+
 ################################################################################################################################################################
 def gen_data(name):
-    p = np.linspace(0.01,0.02,5)
-    y_all, y_all1 = [],[]
-    err, err1 = [], []
+    x = np.linspace(0,0.04,20)
+    shots = 100
+    one, zero, post, one_QEC, zero_QEC, post_QEC = [],[],[],[],[],[]
+    hads = [0,0]
+    for i in x:
+        qc = rot_surf_code(2)
+        hads = [0,0]
 
-    for r in p:
-        ok, errr = Leon(3, 15, argh=r, err=False, k=1)
-        y_all.append(ok), err.append(errr)
-        ok1, errr1 = Leon(3, 15, argh=r, err=True, k=1)
-        y_all1.append(ok1), err1.append(errr1)
+        X_L(qc, False, 1)
+        H_L(qc, pos=0)
+        # ################################################
+        CT_L(qc, qecc=True)
+        # ################################################
+        H_L(qc ,pos=0)
 
-    data = np.array((p, y_all, y_all1, err, err1))
-    np.savetxt("RotSurfFinal_a++{}.txt".format(name), data, delimiter=",")
+        zeros, ones, err = readout(qc, pos=0, shots=shots, noise=i)
+
+        one_QEC.append(ones), zero_QEC.append(zeros), post_QEC.append(err)
+        ######################################## Nochmal aber ohne QEC
+        qc = rot_surf_code(2)
+        hads = [0,0]
+
+        X_L(qc, False, 1)
+        H_L(qc, pos=0)
+        # ################################################
+        CT_L(qc, qecc=False)
+        # ################################################
+        H_L(qc ,pos=0)
+
+        zeros, ones, err = readout(qc, pos=0, shots=shots, noise=i)
+
+        one.append(ones), zero.append(zeros), post.append(err)
+
+    data = np.array((x,zero,one,post,zero_QEC,one_QEC,post_QEC))
+    np.savetxt("FTRotSurf_3rd_e{}.txt".format(name), data, delimiter=",")
