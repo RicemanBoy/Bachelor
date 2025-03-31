@@ -1079,7 +1079,7 @@ def qec_ft(qc: QuantumCircuit, qecc, pos: int):         #70 gates
 
 ################################################################################################################################################################
 def gen_data(name):
-    p = [0.0001,0.0002]
+    p = [0.000025,0.00005]
     y_all, y_all1 = [],[]
     err, err1 = [], []
 
@@ -1090,4 +1090,4 @@ def gen_data(name):
         y_all1.append(ok1), err1.append(errr1)
 
     data = np.array((p, y_all, y_all1, err, err1))
-    np.savetxt("SteaneFinal_a{}.txt".format(name), data, delimiter=",")
+    np.savetxt("SteaneFinal_a+{}.txt".format(name), data, delimiter=",")
