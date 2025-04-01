@@ -15,8 +15,9 @@ h_ideal = UnitaryGate(matrix_h)
 matrix_cx = ([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]])
 cx_ideal = UnitaryGate(matrix_cx) 
 
-def code_goto(cbits, n=3):             #encodes |00>_L
+def code_goto(n=3):             #encodes |00>_L
     qr = QuantumRegister(7*n+2,"q")
+    cbits = ClassicalRegister(3, "c")
     qc = QuantumCircuit(qr, cbits)
     
     anc = qc.num_qubits - 1
@@ -25,6 +26,7 @@ def code_goto(cbits, n=3):             #encodes |00>_L
         qc.id(i)
 
     for i in range(n-1):
+
         qc.h(1+7*i)
         qc.h(2+7*i)
         qc.h(3+7*i)
@@ -48,7 +50,7 @@ def code_goto(cbits, n=3):             #encodes |00>_L
         qc.cx(6+7*i,anc)
 
         qc.id(anc)
-        qc.measure(anc,cbits[i])      
+        qc.measure(anc,cbits[i+1])      
     return qc
 
 def X_L(qc: QuantumCircuit, pos: int):
@@ -66,9 +68,6 @@ def H_L(qc: QuantumCircuit, pos: int):
         qc.h(i+7*pos)
 
 def S_L(qc: QuantumCircuit, pos: int):
-    # for i in range(7):
-    #     qc.z(i+7*pos)
-    #     qc.s(i+7*pos)
     qc.s(0+7*pos), qc.s(1+7*pos), qc.s(3+7*pos), qc.s(6+7*pos)
     qc.sdg(2+7*pos), qc.sdg(4+7*pos), qc.sdg(5+7*pos)
 
@@ -78,9 +77,6 @@ def CZ_L(qc: QuantumCircuit):
     H_L(qc, 0)
 
 def adj_S_L(qc: QuantumCircuit, pos: int):
-    # for i in range(7):
-    #     qc.z(i+7*pos)
-    #     qc.sdg(i+7*pos)
     qc.sdg(0+7*pos), qc.sdg(1+7*pos), qc.sdg(3+7*pos), qc.sdg(6+7*pos)
     qc.s(2+7*pos), qc.s(4+7*pos), qc.s(5+7*pos)
 
@@ -92,71 +88,14 @@ def CNOT_L(qc: QuantumCircuit, control: int):
         for i in range(7):
             qc.cx(i+7,i)
 
-def Ty_L(qc: QuantumCircuit, cbits, pos: int):
-    state_inj = ClassicalRegister(1)
-    qc.add_register(state_inj)
+def CS_L(qc: QuantumCircuit, control: int, target: int):
+    T_L(qc, 0)
+    T_L(qc, 1)
+    CNOT_L(qc, control=control)
+    adj_T_L(qc, pos = target)
+    CNOT_L(qc, control=control)
 
-    anc = qc.num_qubits - 1
-    ancc = anc - 1
-
-    for i in range(7):
-        qc.reset(i+7*2)
-
-    qc.append(h_ideal,[0+7*2])
-    qc.append(h_ideal,[1+7*2])
-    qc.ry(np.pi/4,2+7*2)
-    qc.append(h_ideal,[3+7*2])
-
-    qc.append(cx_ideal, [4+7*2, 2+7*2])
-    qc.append(cx_ideal, [6+7*2, 0+7*2])
-    
-    qc.append(cx_ideal, [5+7*2, 3+7*2])
-
-    qc.append(cx_ideal, [5+7*2, 2+7*2])
-
-    qc.append(cx_ideal, [4+7*2, 0+7*2])
-    qc.append(cx_ideal, [6+7*2, 1+7*2])
-
-    qc.append(cx_ideal, [2+7*2, 0+7*2])
-
-    qc.append(cx_ideal, [5+7*2, 1+7*2])
-
-    qc.append(cx_ideal, [2+7*2, 1+7*2])
-    qc.append(cx_ideal, [4+7*2, 3+7*2])
-    qc.append(cx_ideal, [6+7*2, 3+7*2])
-    #################################Controlled Hadamards##########################################
-    qc.reset(ancc)
-    qc.append(h_ideal,[ancc])
-    for i in range(7):
-        #qc.ch(anc-1,6-i+2*7)
-        qc.ry(-np.pi/4,6-i+2*7)
-        qc.cz(ancc,6-i+2*7)
-        qc.ry(np.pi/4,6-i+2*7)
-    qc.append(h_ideal,[ancc])
-    qc.measure(ancc, state_inj[0])
-    ########################Controlled-Y Gate####################################################
-    adj_S_L(qc, pos)
-    for i in range(7):
-        qc.cx(i+7*2,i+7*pos)
-    S_L(qc, pos)
-    # read = ClassicalRegister(7)
-    # qc.add_register(read)
-    qc.reset(anc-1)
-    #############################Measure logical state for state injection#############################
-    adj_S_L(qc, pos=2)
-    H_L(qc, pos=2)
-    for i in range(7):
-        qc.cx(i+2*7, anc-1)
-    qc.measure(anc-1,cbits[2])
-    #################################Apply conditioned Ry(pi/2) onto the Target###########################
-    for i in range(7):
-        with qc.if_test((cbits[2],1)):
-            qc.h(i+7*pos)
-    for i in range(3):
-        with qc.if_test((cbits[2],1)):
-            qc.x(i+7*pos)
-
-def Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
+def Ty_ec_L(qc: QuantumCircuit, pos: int):
     state_inj = ClassicalRegister(8)
     qc.add_register(state_inj)
     flags = ClassicalRegister(6)
@@ -377,44 +316,44 @@ def Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
     H_L(qc, pos=2)
     for i in range(7):
         qc.cx(i+2*7, anc-1)
-    qc.measure(anc-1,cbits[2])
+    qc.measure(anc-1,0)
     #################################Apply conditioned Ry(pi/2) onto the Target###########################
     for i in range(7):
-        with qc.if_test((cbits[2],1)):
+        with qc.if_test((0,1)):
             qc.h(i+7*pos)
     for i in range(3):
-        with qc.if_test((cbits[2],1)):
+        with qc.if_test((0,1)):
             qc.x(i+7*pos)
 
-def T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False , ecc = False):
+def T_L(qc: QuantumCircuit, pos: int, qecc, err = False , ecc = False):
     H_L(qc, pos=pos)
     adj_S_L(qc, pos=pos)
     H_L(qc, pos=pos)
     if ecc:
-        Ty_ec_L(qc, cbits, pos=pos)
+        Ty_ec_L(qc, pos=pos)
     else:
-        Ty_L(qc, cbits, pos=pos)
+        Ty_L(qc, pos=pos)
     H_L(qc, pos=pos)
     S_L(qc, pos=pos)
     H_L(qc, pos=pos)
-    # if err:
-    #     qec_ft(qc, qecc=qecc, pos=pos)
+    if err:
+        qec_ft(qc, qecc=qecc, pos=pos)
 
-def adj_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False, ecc = False):
+def adj_T_L(qc: QuantumCircuit, pos: int, qecc, err = False, ecc = False):
     H_L(qc, pos=pos)
     adj_S_L(qc, pos=pos)
     H_L(qc, pos=pos)
     if ecc:
-        adj_Ty_ec_L(qc, cbits, pos=pos)
+        adj_Ty_ec_L(qc, pos=pos)
     else:
-        adj_Ty_L(qc, cbits, pos=pos)
+        adj_Ty_L(qc, pos=pos)
     H_L(qc, pos=pos)
     S_L(qc, pos=pos)
     H_L(qc, pos=pos)
-    # if err:
-    #     qec_ft(qc, qecc=qecc, pos=pos)
+    if err:
+        qec_ft(qc, qecc=qecc, pos=pos)
 
-def adj_Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
+def adj_Ty_ec_L(qc: QuantumCircuit, pos: int):
     state_inj = ClassicalRegister(8)
     qc.add_register(state_inj)
     flags = ClassicalRegister(6)
@@ -635,16 +574,81 @@ def adj_Ty_ec_L(qc: QuantumCircuit, cbits, pos: int):
     H_L(qc, pos=2)
     for i in range(7):
         qc.cx(i+2*7, anc-1)
-    qc.measure(anc-1,cbits[2])
+    qc.measure(anc-1,0)
     #################################Apply conditioned Ry(pi/2) onto the Target###########################
     for i in range(3):
-        with qc.if_test((cbits[2],0)):
+        with qc.if_test((0,0)):
             qc.x(i+7*pos)
     for i in range(7):
-        with qc.if_test((cbits[2],0)):
+        with qc.if_test((0,0)):
             qc.h(i+7*pos)
+##############################################################
+#Ideal magic state, das spart viele shots und ist ja auch das was man in der Praxis macht gell
+def Ty_L(qc: QuantumCircuit, pos: int):
+    state_inj = ClassicalRegister(1)
+    qc.add_register(state_inj)
 
-def adj_Ty_L(qc: QuantumCircuit, cbits, pos: int):
+    anc = qc.num_qubits - 1
+    ancc = anc - 1
+
+    for i in range(7):
+        qc.reset(i+7*2)
+
+    qc.append(h_ideal,[0+7*2])
+    qc.append(h_ideal,[1+7*2])
+    qc.ry(np.pi/4,2+7*2)
+    qc.append(h_ideal,[3+7*2])
+
+    qc.append(cx_ideal, [4+7*2, 2+7*2])
+    qc.append(cx_ideal, [6+7*2, 0+7*2])
+    
+    qc.append(cx_ideal, [5+7*2, 3+7*2])
+
+    qc.append(cx_ideal, [5+7*2, 2+7*2])
+
+    qc.append(cx_ideal, [4+7*2, 0+7*2])
+    qc.append(cx_ideal, [6+7*2, 1+7*2])
+
+    qc.append(cx_ideal, [2+7*2, 0+7*2])
+
+    qc.append(cx_ideal, [5+7*2, 1+7*2])
+
+    qc.append(cx_ideal, [2+7*2, 1+7*2])
+    qc.append(cx_ideal, [4+7*2, 3+7*2])
+    qc.append(cx_ideal, [6+7*2, 3+7*2])
+    #################################Controlled Hadamards##########################################
+    qc.reset(ancc)
+    qc.append(h_ideal,[ancc])
+    for i in range(7):
+        #qc.ch(anc-1,6-i+2*7)
+        qc.ry(-np.pi/4,6-i+2*7)
+        qc.cz(ancc,6-i+2*7)
+        qc.ry(np.pi/4,6-i+2*7)
+    qc.append(h_ideal,[ancc])
+    qc.measure(ancc, state_inj[0])
+    ########################Controlled-Y Gate####################################################
+    adj_S_L(qc, pos)
+    for i in range(7):
+        qc.cx(i+7*2,i+7*pos)
+    S_L(qc, pos)
+    # read = ClassicalRegister(7)
+    # qc.add_register(read)
+    qc.reset(anc-1)
+    #############################Measure logical state for state injection#############################
+    adj_S_L(qc, pos=2)
+    H_L(qc, pos=2)
+    for i in range(7):
+        qc.cx(i+2*7, anc-1)
+    qc.measure(anc-1,0)
+    #################################Apply conditioned Ry(pi/2) onto the Target###########################
+    for i in range(7):
+        with qc.if_test((0,1)):
+            qc.h(i+7*pos)
+    for i in range(3):
+        with qc.if_test((0,1)):
+            qc.x(i+7*pos)
+
+def adj_Ty_L(qc: QuantumCircuit, pos: int):
     state_inj = ClassicalRegister(1)
     qc.add_register(state_inj)
 
@@ -699,15 +703,15 @@ def adj_Ty_L(qc: QuantumCircuit, cbits, pos: int):
     H_L(qc, pos=2)
     for i in range(7):
         qc.cx(i+2*7, anc-1)
-    qc.measure(anc-1,cbits[2])
+    qc.measure(anc-1,0)
     #################################Apply conditioned Ry(-pi/2) onto the Target###########################
     for i in range(3):
-        with qc.if_test((cbits[2],0)):
+        with qc.if_test((0,0)):
             qc.x(i+7*pos)
     for i in range(7):
-        with qc.if_test((cbits[2],0)):
+        with qc.if_test((0,0)):
             qc.h(i+7*pos)
-
+##############################################################
 circ = QuantumCircuit(1)
 circ.rz(np.pi/8, 0)
 basis = ["t", "tdg", "z", "h"]
@@ -715,23 +719,19 @@ approx = generate_basic_approximations(basis, depth=3)
 skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
 rootT = skd(circ)
 
-def root_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err = False, ecc = False):
+def root_T_L(qc: QuantumCircuit, pos: int, qecc, err = False, ecc = False):
     instruction = rootT.data
-    #counter = 0
+    counter = 0
     for i in instruction:
-        #if counter%2 == 0:
-            # if err:
-            #     qec_ft(qc, qecc=qecc, pos=pos)
+        if counter%3 == 0:
+            if err:
+                qec_ft(qc, qecc=qecc, pos=pos)
         if i.name == "t":
-            T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
-            if err:
-                qec_ft(qc, qecc=qecc, pos=pos)
-            #counter += 1
+            T_L(qc, pos=pos, qecc=qecc, err=err, ecc=ecc)
+            counter += 1
         if i.name == "tdg":
-            adj_T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
-            if err:
-                qec_ft(qc, qecc=qecc, pos=pos)
-            #counter += 1
+            adj_T_L(qc, pos=pos, qecc=qecc, err=err, ecc=ecc)
+            counter += 1
         if i.name == "h":
             H_L(qc, pos=pos)
 
@@ -742,79 +742,30 @@ approx = generate_basic_approximations(basis, depth=3)
 skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
 adj_rootT = skd(circ)
 
-def adj_root_T_L(qc: QuantumCircuit, cbits, pos: int, qecc, err=False, ecc = False):
+def adj_root_T_L(qc: QuantumCircuit, pos: int, qecc, err=False, ecc = False):
     instruction = adj_rootT.data
-    #counter = 0
+    counter = 0
     for i in instruction:
-        #if counter%2 == 0:
-            # if err:
-            #     qec_ft(qc, qecc=qecc, pos=pos)
+        if counter%3 == 0:
+            if err:
+                qec_ft(qc, qecc=qecc, pos=pos)
         if i.name == "t":
-            T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
-            if err:
-                qec_ft(qc, qecc=qecc, pos=pos)
-            #counter += 1
+            T_L(qc, pos=pos, qecc=qecc, err=err, ecc=ecc)
+            counter += 1
         if i.name == "tdg":
-            adj_T_L(qc, cbits, pos=pos, qecc=qecc, err=err, ecc=ecc)
-            if err:
-                qec_ft(qc, qecc=qecc, pos=pos)
-            #counter += 1
+            adj_T_L(qc, pos=pos, qecc=qecc, err=err, ecc=ecc)
+            counter += 1
         if i.name == "h":
             H_L(qc, pos=pos)
 
-def CT_L(qc: QuantumCircuit, cbits, qecc, err=False, ecc = False):
-    if err:
-        qec_ft(qc, qecc, 0), qec_ft(qc, qecc, 1)
-    root_T_L(qc, cbits, 0, qecc = qecc, err=err, ecc=ecc)
-    root_T_L(qc, cbits, 1, qecc = qecc, err=err, ecc=ecc)
+def CT_L(qc: QuantumCircuit, qecc, err=False, ecc = False):
+    root_T_L(qc, 0, qecc = qecc, err=err, ecc=ecc)
+    root_T_L(qc, 1, qecc = qecc, err=err, ecc=ecc)
     CNOT_L(qc, 0)
-    if err:
-        qec_ft(qc, qecc, 1)
-    adj_root_T_L(qc, cbits, 1, qecc = qecc, err=err, ecc=ecc)
+    adj_root_T_L(qc, 1, qecc = qecc, err=err, ecc=ecc)
     CNOT_L(qc, 0)
 
-def U2(qc: QuantumCircuit, pos: int, qecc, err=False):
-    gate = ['s', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'sdg', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 's', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't']
-    for i in gate:
-        if i == "t":
-            T_L(qc, pos=pos)
-            if err:
-                qec_ft(qc, qecc, pos=pos)
-        if i == "tdg":
-            adj_T_L(qc, pos=pos)
-            if err:
-                qec_ft(qc, qecc, pos=pos)
-        if i == "h":
-            H_L(qc, pos=pos)
-
-def adjU2(qc: QuantumCircuit, pos: int, qecc, err=False):
-    gate = ['s', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 't', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'sdg', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 's', 'h', 's', 'h', 't', 'h', 'tdg', 'h', 'sdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 'tdg', 'h', 'tdg', 'h', 't', 'h', 't', 'h', 't']
-    gate.reverse()
-    for i in gate:
-        if i == "tdg":
-            T_L(qc, pos=pos)
-            if err:
-                qec_ft(qc, qecc, pos=pos)
-        if i == "t":
-            adj_T_L(qc, pos=pos)
-            if err:
-                qec_ft(qc, qecc, pos=pos)
-        if i == "h":
-            H_L(qc, pos=pos)
-
-def CU_L(qc: QuantumCircuit, qecc, err = False):
-    U2(qc, pos=0, qecc=qecc, err=err)
-    U2(qc, pos=1, qecc=qecc, err=err)
-    CNOT_L(qc, 0)
-    adjU2(qc, pos=1, qecc=qecc, err=err)
-    CNOT_L(qc, 0)
-
-def CS_L(qc: QuantumCircuit, control: int, target: int):
-    T_L(qc, 0)
-    T_L(qc, 1)
-    CNOT_L(qc, control=control)
-    adj_T_L(qc, pos = target)
-    CNOT_L(qc, control=control)
+#################################################################
 
 def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     p = noise
@@ -822,8 +773,8 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     p_error_2 = pauli_error([["XI",p/4],["IX",p/4],["II",1-p],["ZI",p/4],["IZ",p/4]])
 
     noise_model = NoiseModel()
-    noise_model.add_all_qubit_quantum_error(p_error, ['x', "z", 'h', "s", "sdg", "id", "ry"])  # Apply to single-qubit gates
-    noise_model.add_all_qubit_quantum_error(p_error_2, ['cx',"cz"])  # Apply to 2-qubit gates
+    noise_model.add_all_qubit_quantum_error(p_error, ['x', "z", 'h', "s", "sdg", "id"])  # Apply to single-qubit gates
+    noise_model.add_all_qubit_quantum_error(p_error_2, ['cx'])  # Apply to 2-qubit gates
 
     read = ClassicalRegister(7)
     qc.add_register(read)
@@ -839,14 +790,23 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     result = job.result()
     counts = result.get_counts()
 
+    #print(counts)
+
+    #print(counts)
+
     bitstring = list(counts.keys())
+    bitstring = [i.replace(" ","") for i in bitstring]
+
 
     hmm = list(counts.values())
 
-    allcbits = len(bitstring[0])                #in allcbits sind die Leerzeichen noch drinnen!!!!
-    pre, preselected = [i[allcbits-2:] for i in bitstring], 0
+    allcbits = len(bitstring[0])                
+    pre, preselected = [i[allcbits-3:allcbits-1] for i in bitstring], 0
     bits = [i[:7] for i in bitstring]
     postprocess = [i[7:allcbits-10] for i in bitstring]
+
+    #print(bits)
+    #print(postprocess)
 
     for i in range(len(pre)):
         if pre[i].count("1") != 0:
@@ -896,13 +856,13 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     preselected = (preselected/shots)
     #magic = (magic/shots)
 
-    # print("0: ", zeros, "%")
-    # print("1: ", ones, "%")
+    # print("0: ", zeros*100, "%")
+    # print("1: ", ones*100, "%")
     # print("Preselection discarded: ", (preselected/shots)*100, "%")
-    # print("Postselection discarded: ", err - (preselected/shots)*100, "%")
+    # print("Postselection discarded: ", (post/shots)*100, "%")
     return zeros, ones, preselected, post#,magic
 
-def qec_ft(qc: QuantumCircuit, qecc, pos: int):
+def qec_ft(qc: QuantumCircuit, qecc, pos: int):         #70 gates, 72 depth
     flags = ClassicalRegister(6)
     qc.add_register(flags)
     anc = qc.num_qubits - 1
@@ -1064,12 +1024,11 @@ def qec_ft(qc: QuantumCircuit, qecc, pos: int):
 
 ################################################################################################################################################################
 def gen_data(name):
-    x = np.linspace(0.00,0.001,3)
-    shots = 5
+    x = np.linspace(0.001,0.002,3)
+    shots = 10
     one, zero, one_QEC, zero_QEC, pre, post, pre_QEC, post_QEC = [],[],[],[],[],[],[],[]
     for i in x:
-        cbits = ClassicalRegister(3,"c")
-        qc = code_goto(cbits=cbits)
+        qc = code_goto()
 
         qecc = ClassicalRegister(6)
         qc.add_register(qecc)
@@ -1077,8 +1036,9 @@ def gen_data(name):
         X_L(qc,1)
         H_L(qc,0)
 
-        for j in range(4):
-            CU_L(qc, qecc=qecc, err=False)
+        CT_L(qc, qecc, err=False, ecc = False)
+        adj_T_L(qc, 0, qecc=qecc, err=False, ecc=False)
+
 
         H_L(qc,0)
 
@@ -1086,17 +1046,16 @@ def gen_data(name):
 
         pre.append(preselec), post.append(postselec), one.append(ones), zero.append(zeros)
         ###################################################################################################
-        cbits = ClassicalRegister(3,"c")
-        qc = code_goto(cbits=cbits)
+        qc = code_goto()
 
         qecc = ClassicalRegister(6)
         qc.add_register(qecc)
 
         X_L(qc,1)
         H_L(qc,0)
-        qec_ft(qc, qecc, 0), qec_ft(qc, qecc, 1)
-        for j in range(4):
-            CU_L(qc, qecc=qecc, err=True)
+        CT_L(qc, qecc, err=True, ecc = False)
+        adj_T_L(qc, 0, qecc=qecc, err=False, ecc=False)
+
         H_L(qc,0)
 
         zeros, ones, preselec, postselec = readout(qc, 0, shots, i)
@@ -1104,4 +1063,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("FTSteane_a{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTSteane_3rd_l{}.txt".format(name), data, delimiter=",")
