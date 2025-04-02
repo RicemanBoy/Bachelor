@@ -723,7 +723,7 @@ def root_T_L(qc: QuantumCircuit, pos: int, qecc, err = False, ecc = False):
     instruction = rootT.data
     counter = 0
     for i in instruction:
-        if counter%3 == 0:
+        if counter%2 == 0:
             if err:
                 qec_ft(qc, qecc=qecc, pos=pos)
         if i.name == "t":
@@ -746,7 +746,7 @@ def adj_root_T_L(qc: QuantumCircuit, pos: int, qecc, err=False, ecc = False):
     instruction = adj_rootT.data
     counter = 0
     for i in instruction:
-        if counter%3 == 0:
+        if counter%2 == 0:
             if err:
                 qec_ft(qc, qecc=qecc, pos=pos)
         if i.name == "t":
@@ -1025,7 +1025,7 @@ def qec_ft(qc: QuantumCircuit, qecc, pos: int):         #70 gates, 72 depth
 ################################################################################################################################################################
 def gen_data(name):
     x = np.linspace(0.001,0.002,3)
-    shots = 10
+    shots = 20
     one, zero, one_QEC, zero_QEC, pre, post, pre_QEC, post_QEC = [],[],[],[],[],[],[],[]
     for i in x:
         qc = code_goto()
@@ -1063,4 +1063,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("FTSteane_3rd_l{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTSteane_3rd_m{}.txt".format(name), data, delimiter=",")
