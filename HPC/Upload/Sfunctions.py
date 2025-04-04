@@ -617,15 +617,15 @@ def Ty_L(qc: QuantumCircuit, pos: int):
     qc.append(cx_ideal, [4+7*2, 3+7*2])
     qc.append(cx_ideal, [6+7*2, 3+7*2])
     #################################Controlled Hadamards##########################################
-    qc.reset(ancc)
-    qc.append(h_ideal,[ancc])
-    for i in range(7):
-        #qc.ch(anc-1,6-i+2*7)
-        qc.ry(-np.pi/4,6-i+2*7)
-        qc.cz(ancc,6-i+2*7)
-        qc.ry(np.pi/4,6-i+2*7)
-    qc.append(h_ideal,[ancc])
-    qc.measure(ancc, state_inj[0])
+    # qc.reset(ancc)
+    # qc.append(h_ideal,[ancc])
+    # for i in range(7):
+    #     #qc.ch(anc-1,6-i+2*7)
+    #     qc.ry(-np.pi/4,6-i+2*7)
+    #     qc.cz(ancc,6-i+2*7)
+    #     qc.ry(np.pi/4,6-i+2*7)
+    # qc.append(h_ideal,[ancc])
+    # qc.measure(ancc, state_inj[0])
     ########################Controlled-Y Gate####################################################
     adj_S_L(qc, pos)
     for i in range(7):
@@ -681,15 +681,15 @@ def adj_Ty_L(qc: QuantumCircuit, pos: int):
     qc.append(cx_ideal, [4+7*2, 3+7*2])
     qc.append(cx_ideal, [6+7*2, 3+7*2])
     #################################Controlled Hadamards##########################################
-    qc.reset(ancc)
-    qc.h(ancc)
-    for i in range(7):
-        #qc.ch(anc-1,6-i+2*7)
-        qc.ry(-np.pi/4,6-i+2*7)
-        qc.cz(ancc,6-i+2*7)
-        qc.ry(np.pi/4,6-i+2*7)
-    qc.h(ancc)
-    qc.measure(ancc, state_inj[0])
+    # qc.reset(ancc)
+    # qc.h(ancc)
+    # for i in range(7):
+    #     #qc.ch(anc-1,6-i+2*7)
+    #     qc.ry(-np.pi/4,6-i+2*7)
+    #     qc.cz(ancc,6-i+2*7)
+    #     qc.ry(np.pi/4,6-i+2*7)
+    # qc.h(ancc)
+    # qc.measure(ancc, state_inj[0])
     ########################Controlled-Y Gate####################################################
     adj_S_L(qc, pos)
     for i in range(7):
@@ -1024,7 +1024,7 @@ def qec_ft(qc: QuantumCircuit, qecc, pos: int):         #70 gates, 72 depth
 
 ############################################################################################################################################clsls####################
 def gen_data(name):
-    x = np.linspace(0.000,0.0005,2)
+    x = np.linspace(0.001,0.002,3)
     shots = 20
     one, zero, one_QEC, zero_QEC, pre, post, pre_QEC, post_QEC = [],[],[],[],[],[],[],[]
     for i in x:
@@ -1063,4 +1063,4 @@ def gen_data(name):
         pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
 
     data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("FTSteane_3rd_n+{}.txt".format(name), data, delimiter=",")
+    np.savetxt("FTSteane_3rd_o{}.txt".format(name), data, delimiter=",")
