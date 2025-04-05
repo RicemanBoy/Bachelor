@@ -736,26 +736,15 @@ def convert(bin: str):                  #konvertiert den bitstring in decimal, e
     return n
 
 def U2(qc: QuantumCircuit, pos: int, gate: list, qecc, err=False, ecc=False):
-    counter = 1
     for i in gate:
         if i == "s":
             S_L(qc, pos=pos)
         if i == "sdg":
             adj_S_L(qc, pos=pos)
         if i == "t":
-            if counter%3 == 0:
-                T_L(qc, pos=pos, qecc=qecc, err=err , ecc=ecc)
-                counter += 1
-            else:
-                T_L(qc, pos=pos, qecc=qecc, err=False , ecc=ecc)
-                counter += 1
+            T_L(qc, pos=pos, qecc=qecc, err=err , ecc=ecc)
         if i == "tdg":
-            if counter%3 == 0:
-                adj_T_L(qc, pos=pos, qecc=qecc, err=err , ecc=ecc)
-                counter += 1
-            else:
-                adj_T_L(qc, pos=pos, qecc=qecc, err=False , ecc=ecc)
-                counter += 1
+            adj_T_L(qc, pos=pos, qecc=qecc, err=err , ecc=ecc)
         if i == "h":
             H_L(qc, pos=pos)
         if i == "z":
@@ -1090,7 +1079,7 @@ def qec_ft(qc: QuantumCircuit, qecc, pos: int):         #70 gates
 
 ################################################################################################################################################################
 def gen_data(name):
-    p = [0.0001,0.0002]
+    p = [0.0003,0.0005]
     y_all, y_all1 = [],[]
     err, err1 = [], []
 
@@ -1101,4 +1090,4 @@ def gen_data(name):
         y_all1.append(ok1), err1.append(errr1)
 
     data = np.array((p, y_all, y_all1, err, err1))
-    np.savetxt("SteaneFinal_b{}.txt".format(name), data, delimiter=",")
+    np.savetxt("SteaneFinal_a++new{}.txt".format(name), data, delimiter=",")
