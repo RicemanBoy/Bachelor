@@ -9,11 +9,19 @@ from qiskit_aer.noise import (NoiseModel, pauli_error)
 from qiskit.circuit.library import UnitaryGate
 
 ################################################################################################################################################################
+#noisefree gates
 matrix_h = ([[2**(-0.5),2**(-0.5)],[2**(-0.5),-2**(-0.5)]])
 h_ideal = UnitaryGate(matrix_h)
 
 matrix_cx = ([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]])
-cx_ideal = UnitaryGate(matrix_cx) 
+cx_ideal = UnitaryGate(matrix_cx)       #Erst Target, dann Control Qubit!!
+
+matrix_x = ([[0,1],[1,0]])
+x_ideal = UnitaryGate(matrix_x)
+
+matrix_z = ([[1,0],[0,-1]])
+z_ideal = UnitaryGate(matrix_z)
+
 
 def code_goto(n=3):             #encodes |00>_L
     qr = QuantumRegister(7*n+2,"q")
@@ -26,7 +34,6 @@ def code_goto(n=3):             #encodes |00>_L
         qc.id(i)
 
     for i in range(n-1):
-
         qc.h(1+7*i)
         qc.h(2+7*i)
         qc.h(3+7*i)
@@ -68,6 +75,9 @@ def H_L(qc: QuantumCircuit, pos: int):
         qc.h(i+7*pos)
 
 def S_L(qc: QuantumCircuit, pos: int):
+    # for i in range(7):
+    #     qc.z(i+7*pos)
+    #     qc.s(i+7*pos)
     qc.s(0+7*pos), qc.s(1+7*pos), qc.s(3+7*pos), qc.s(6+7*pos)
     qc.sdg(2+7*pos), qc.sdg(4+7*pos), qc.sdg(5+7*pos)
 
@@ -77,6 +87,9 @@ def CZ_L(qc: QuantumCircuit):
     H_L(qc, 0)
 
 def adj_S_L(qc: QuantumCircuit, pos: int):
+    # for i in range(7):
+    #     qc.z(i+7*pos)
+    #     qc.sdg(i+7*pos)
     qc.sdg(0+7*pos), qc.sdg(1+7*pos), qc.sdg(3+7*pos), qc.sdg(6+7*pos)
     qc.s(2+7*pos), qc.s(4+7*pos), qc.s(5+7*pos)
 
@@ -617,15 +630,15 @@ def Ty_L(qc: QuantumCircuit, pos: int):
     qc.append(cx_ideal, [4+7*2, 3+7*2])
     qc.append(cx_ideal, [6+7*2, 3+7*2])
     #################################Controlled Hadamards##########################################
-    # qc.reset(ancc)
-    # qc.append(h_ideal,[ancc])
-    # for i in range(7):
-    #     #qc.ch(anc-1,6-i+2*7)
-    #     qc.ry(-np.pi/4,6-i+2*7)
-    #     qc.cz(ancc,6-i+2*7)
-    #     qc.ry(np.pi/4,6-i+2*7)
-    # qc.append(h_ideal,[ancc])
-    # qc.measure(ancc, state_inj[0])
+    qc.reset(ancc)
+    qc.append(h_ideal,[ancc])
+    for i in range(7):
+        #qc.ch(anc-1,6-i+2*7)
+        qc.ry(-np.pi/4,6-i+2*7)
+        qc.cz(ancc,6-i+2*7)
+        qc.ry(np.pi/4,6-i+2*7)
+    qc.append(h_ideal,[ancc])
+    qc.measure(ancc, state_inj[0])
     ########################Controlled-Y Gate####################################################
     adj_S_L(qc, pos)
     for i in range(7):
@@ -681,15 +694,15 @@ def adj_Ty_L(qc: QuantumCircuit, pos: int):
     qc.append(cx_ideal, [4+7*2, 3+7*2])
     qc.append(cx_ideal, [6+7*2, 3+7*2])
     #################################Controlled Hadamards##########################################
-    # qc.reset(ancc)
-    # qc.h(ancc)
-    # for i in range(7):
-    #     #qc.ch(anc-1,6-i+2*7)
-    #     qc.ry(-np.pi/4,6-i+2*7)
-    #     qc.cz(ancc,6-i+2*7)
-    #     qc.ry(np.pi/4,6-i+2*7)
-    # qc.h(ancc)
-    # qc.measure(ancc, state_inj[0])
+    qc.reset(ancc)
+    qc.h(ancc)
+    for i in range(7):
+        #qc.ch(anc-1,6-i+2*7)
+        qc.ry(-np.pi/4,6-i+2*7)
+        qc.cz(ancc,6-i+2*7)
+        qc.ry(np.pi/4,6-i+2*7)
+    qc.h(ancc)
+    qc.measure(ancc, state_inj[0])
     ########################Controlled-Y Gate####################################################
     adj_S_L(qc, pos)
     for i in range(7):
@@ -711,60 +724,102 @@ def adj_Ty_L(qc: QuantumCircuit, pos: int):
     for i in range(7):
         with qc.if_test((0,0)):
             qc.h(i+7*pos)
-##############################################################
-circ = QuantumCircuit(1)
-circ.rz(np.pi/8, 0)
-basis = ["t", "tdg", "z", "h"]
-approx = generate_basic_approximations(basis, depth=3)
-skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
-rootT = skd(circ)
 
-def root_T_L(qc: QuantumCircuit, pos: int, qecc, err = False, ecc = False):
-    instruction = rootT.data
-    counter = 0
-    for i in instruction:
-        if counter%4 == 0:
-            if err:
-                qec_ft(qc, qecc=qecc, pos=pos)
-        if i.name == "t":
-            T_L(qc, pos=pos, qecc=qecc, err=err, ecc=ecc)
-            counter += 1
-        if i.name == "tdg":
-            adj_T_L(qc, pos=pos, qecc=qecc, err=err, ecc=ecc)
-            counter += 1
-        if i.name == "h":
+###############################################################
+def convert(bin: str):                  #konvertiert den bitstring in decimal, e.g. 0110 = 0.375
+    k = list(bin)
+    a = [int(i) for i in k]
+    n = 0
+    for i in range(len(a)):
+        if a[i] == 1:
+            n += 1/2**(i+1)
+    return n
+
+def U2(qc: QuantumCircuit, pos: int, gate: list, qecc, err=False, ecc=False):
+    for i in gate:
+        if i == "s":
+            S_L(qc, pos=pos)
+        if i == "sdg":
+            adj_S_L(qc, pos=pos)
+        if i == "t":
+            T_L(qc, pos=pos, qecc=qecc, err=err , ecc=ecc)
+        if i == "tdg":
+            adj_T_L(qc, pos=pos, qecc=qecc, err=err , ecc=ecc)
+        if i == "h":
             H_L(qc, pos=pos)
+        if i == "z":
+            Z_L(qc, pos=pos)
 
-circ = QuantumCircuit(1)
-circ.rz(-np.pi/8, 0)
-basis = ["t", "tdg", "z", "h"]
-approx = generate_basic_approximations(basis, depth=3)
-skd = SolovayKitaev(recursion_degree=2, basic_approximations=approx)
-adj_rootT = skd(circ)
+def CU_L(qc: QuantumCircuit, Ugates: list, adjUgates: list, qecc, err=False, ecc=False):
+    U2(qc, 0, Ugates, qecc, err=err, ecc=ecc)
+    U2(qc, 1, Ugates, qecc, err=err, ecc=ecc)
+    CNOT_L(qc, control=0)
+    U2(qc, 1, adjUgates, qecc, err=err, ecc=ecc)
+    CNOT_L(qc, control=0)
 
-def adj_root_T_L(qc: QuantumCircuit, pos: int, qecc, err=False, ecc = False):
-    instruction = adj_rootT.data
-    counter = 0
-    for i in instruction:
-        if counter%4 == 0:
-            if err:
-                qec_ft(qc, qecc=qecc, pos=pos)
-        if i.name == "t":
-            T_L(qc, pos=pos, qecc=qecc, err=err, ecc=ecc)
-            counter += 1
-        if i.name == "tdg":
-            adj_T_L(qc, pos=pos, qecc=qecc, err=err, ecc=ecc)
-            counter += 1
-        if i.name == "h":
-            H_L(qc, pos=pos)
+def Leon(iter: int, n:int, argh: float, err = False, ecc = False, k = 1):       #each iteration own circuit
+    angle = np.linspace(0,1,n+2)
+    angle = np.delete(angle, [n+1])
+    angle = np.delete(angle, [0])
 
-def CT_L(qc: QuantumCircuit, qecc, err=False, ecc = False):
-    root_T_L(qc, 0, qecc = qecc, err=err, ecc=ecc)
-    root_T_L(qc, 1, qecc = qecc, err=err, ecc=ecc)
-    CNOT_L(qc, 0)
-    adj_root_T_L(qc, 1, qecc = qecc, err=err, ecc=ecc)
-    CNOT_L(qc, 0)
+    a, b = [], []
+    with open("unitary{}.txt".format(n), "r") as file:
+        for line in file:
+            a.append(list(map(str, line.strip().split(","))))
+    with open("adjunitary{}.txt".format(n), "r") as file:
+        for line in file:
+            b.append(list(map(str, line.strip().split(","))))
+    
+    y = 0
+    bruh1 = []
+    global hads
+    for m in range(k):
+        for o in range(n):
+            bitstring = ""
+            rots = []
+            for t in range(iter):
+                rots = [k*0.5 for k in rots]
+                while True:
+                    qc = code_goto()
+                    qecc = ClassicalRegister(6)
+                    qc.add_register(qecc)
 
+                    X_L(qc,1)
+                    H_L(qc,0)
+                    #############################
+                    for j in range(2**(iter-t-1)):
+                        CU_L(qc, a[o], b[o], qecc, err=err, ecc=ecc)
+                    ###############################
+                    for l in rots:
+                        if l == 0.25:
+                            adj_S_L(qc, pos=0)
+                        if l == 0.125:
+                            adj_T_L(qc, pos=0, qecc=qecc, err=err, ecc=ecc)
+                    H_L(qc, pos=0)
+                    if err:
+                        qec_ft(qc, qecc=qecc, pos=0)
+                    zeros, ones, _,_ = readout(qc, pos=0, shots=1, noise=argh)
+            
+                    if zeros == 1:
+                        bitstring += "0"
+                        break
+                    if ones == 1:
+                        bitstring += "1"
+                        rots.append(0.5)
+                        break
+            bitstring = bitstring[::-1]
+            hmm = convert(bitstring)
+            diff = np.abs(hmm-angle[o])
+            y += diff
+            bruh1.append(diff)
+    y = y/(n*k)
+    arg = 0
+    for i in range(len(bruh1)):
+        arg += (y-bruh1[i])**2
+    sigma = ((1/(k*n))*arg)**0.5
+    sigma = sigma/((k*n)**0.5)
+
+    return y, sigma
 #################################################################
 
 def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
@@ -862,7 +917,7 @@ def readout(qc: QuantumCircuit, pos: int, shots: int, noise = 0):
     # print("Postselection discarded: ", (post/shots)*100, "%")
     return zeros, ones, preselected, post#,magic
 
-def qec_ft(qc: QuantumCircuit, qecc, pos: int):         #70 gates, 72 depth
+def qec_ft(qc: QuantumCircuit, qecc, pos: int):         #70 gates
     flags = ClassicalRegister(6)
     qc.add_register(flags)
     anc = qc.num_qubits - 1
@@ -1022,45 +1077,17 @@ def qec_ft(qc: QuantumCircuit, qecc, pos: int):         #70 gates, 72 depth
             with qc.if_test((qecc[5],1)):
                 qc.z(6+7*pos)
 
-############################################################################################################################################clsls####################
+################################################################################################################################################################
 def gen_data(name):
-    x = np.linspace(0.001,0.002,3)
-    shots = 20
-    one, zero, one_QEC, zero_QEC, pre, post, pre_QEC, post_QEC = [],[],[],[],[],[],[],[]
-    for i in x:
-        qc = code_goto()
+    p = [0.0007]
+    y_all, y_all1 = [],[]
+    err, err1 = [], []
 
-        qecc = ClassicalRegister(6)
-        qc.add_register(qecc)
+    for r in p:
+        ok, errr = Leon(3, 15, argh=r, err=False, k=1)
+        y_all.append(ok), err.append(errr)
+        ok1, errr1 = Leon(3, 15, argh=r, err=True, k=1)
+        y_all1.append(ok1), err1.append(errr1)
 
-        X_L(qc,1)
-        H_L(qc,0)
-
-        CT_L(qc, qecc, err=False, ecc = False)
-        adj_T_L(qc, 0, qecc=qecc, err=False, ecc=False)
-
-
-        H_L(qc,0)
-
-        zeros, ones, preselec, postselec = readout(qc, 0, shots, i)
-
-        pre.append(preselec), post.append(postselec), one.append(ones), zero.append(zeros)
-        ###################################################################################################
-        qc = code_goto()
-
-        qecc = ClassicalRegister(6)
-        qc.add_register(qecc)
-
-        X_L(qc,1)
-        H_L(qc,0)
-        CT_L(qc, qecc, err=True, ecc = False)
-        adj_T_L(qc, 0, qecc=qecc, err=False, ecc=False)
-
-        H_L(qc,0)
-
-        zeros, ones, preselec, postselec = readout(qc, 0, shots, i)
-            
-        pre_QEC.append(preselec), post_QEC.append(postselec), one_QEC.append(ones), zero_QEC.append(zeros)
-
-    data = np.array((x,pre,post,zero,one,pre_QEC,post_QEC, zero_QEC, one_QEC))
-    np.savetxt("FTSteane_3rd_o{}.txt".format(name), data, delimiter=",")
+    data = np.array((p, y_all, y_all1, err, err1))
+    np.savetxt("SteaneFinal_a+++{}.txt".format(name), data, delimiter=",")
