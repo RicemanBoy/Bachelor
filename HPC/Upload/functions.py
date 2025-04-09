@@ -299,7 +299,8 @@ def convert(bin: str):                  #konvertiert den bitstring in decimal, e
             n += 1/2**(i+1)
     return n
 
-def U2(qc: QuantumCircuit, pos: int, gate: list):
+def U2(qc: QuantumCircuit, pos: int, gate: list, err=False):
+    counter = 0
     for i in gate:
         if i == "s":
             S_L(qc, pos=pos)
@@ -311,20 +312,22 @@ def U2(qc: QuantumCircuit, pos: int, gate: list):
             adj_T_L(qc, pos=pos)
         if i == "h":
             H_L(qc, pos=pos)
+            counter += 1
+            if err:
+                if counter%8 == 0:
+                    qec(qc, pos=pos)
         if i == "z":
             Z_L(qc, pos=pos)
 
 def CU_L(qc: QuantumCircuit, Ugates: list, adjUgates: list, err = False):
-    U2(qc, 0, Ugates)
-    if err:
-        qec(qc, pos=0)
-    U2(qc, 1, Ugates)
-    # if err:
-    #     qec(qc, pos=1)
+    U2(qc, 0, Ugates, err=err)
+    
+    U2(qc, 1, Ugates, err=err)
+
     CNOT(qc, control=0)
-    U2(qc, 1, adjUgates)
-    if err:
-        qec(qc, pos=1)
+
+    U2(qc, 1, adjUgates, err=err)
+
     CNOT(qc, control=0)
 
 def Leon(iter: int, n:int, argh: float, err = False, k = 1):       #each iteration own circuit
@@ -811,4 +814,4 @@ def gen_data(name):
         y_all1.append(ok1), err1.append(errr1)
 
     data = np.array((p, y_all, y_all1, err, err1))
-    np.savetxt("RotSurfFinal_b{}.txt".format(name), data, delimiter=",")
+    np.savetxt("RotSurfFinal_c{}.txt".format(name), data, delimiter=",")
