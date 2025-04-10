@@ -314,7 +314,7 @@ def U2(qc: QuantumCircuit, pos: int, gate: list, err=False):
             H_L(qc, pos=pos)
             counter += 1
             if err:
-                if counter%8 == 0:
+                if counter%5 == 0:
                     qec(qc, pos=pos)
         if i == "z":
             Z_L(qc, pos=pos)
@@ -814,4 +814,4 @@ def gen_data(name):
         y_all1.append(ok1), err1.append(errr1)
 
     data = np.array((p, y_all, y_all1, err, err1))
-    np.savetxt("RotSurfFinal_c{}.txt".format(name), data, delimiter=",")
+    np.savetxt("RotSurfFinal_d{}.txt".format(name), data, delimiter=",")
