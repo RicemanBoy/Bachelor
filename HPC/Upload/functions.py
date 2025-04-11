@@ -311,6 +311,7 @@ def U2(qc: QuantumCircuit, q:list, pos: int, gate: list):
             Z_L(qc, q ,pos=pos)
 
 def CU_L(qc: QuantumCircuit, q:list, Ugates: list, adjUgates: list, tracker, err = False):
+    global well
     U2(qc, q, 0, Ugates)
     if well%2 == 0:
         if err:
@@ -340,7 +341,7 @@ def Leon(iter: int, n:int, noise: float, err = False, k = 1):       #each iterat
     with open("adjunitary{}.txt".format(n), "r") as file:
         for line in file:
             b.append(list(map(str, line.strip().split(","))))
-    
+    global well
     y = 0
     bruh1 = []
     for m in range(k):

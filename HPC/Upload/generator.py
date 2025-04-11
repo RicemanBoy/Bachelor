@@ -3,7 +3,7 @@ N=400
 for i in range(N):
     file=open('{}.py'.format(i), 'a')
     file.write('from functions import *\n')
-    file.write("hads = [0,0] \n")
+    file.write("well = 0 \n")
     file.write('gen_data({})'.format(i))
     file.close()
 
