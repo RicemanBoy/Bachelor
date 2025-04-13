@@ -936,6 +936,7 @@ def fullpp_ft(counts: dict, shots: int, cbits: int, track, two = True):
 ################################################################################################################################################################
 def gen_data(name):
     p = np.linspace(0.00,0.005,6)
+    p = [i + 0.0005 for i in p]
     y_all, y_all1 = [],[]
     err, err1 = [], []
 
@@ -946,4 +947,4 @@ def gen_data(name):
         y_all1.append(ok1), err1.append(errr1)
 
     data = np.array((p, y_all, y_all1, err, err1))
-    np.savetxt("CarbFinal_m{}.txt".format(name), data, delimiter=",")
+    np.savetxt("CarbFinal_m+{}.txt".format(name), data, delimiter=",")
